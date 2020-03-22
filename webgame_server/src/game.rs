@@ -206,5 +206,5 @@ pub async fn serve() {
             ws.on_upgrade(move |ws| on_player_connected(state, ws))
         });
 
-    warp::serve(routes).run(([127, 0, 0, 1], 3030)).await;
+    warp::serve(routes).run(([127, 0, 0, 1], 8002)).await;
 }
