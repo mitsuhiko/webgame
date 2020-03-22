@@ -1,0 +1,9 @@
+[package]
+name = "webgame_protocol"
+version = "0.1.0"
+authors = ["Armin Ronacher <armin.ronacher@active-4.com>"]
+edition = "2018"
+
+[dependencies]
+serde = { version = "1.0.105", features = ["derive"] }
+uuid = { version = "0.8.1", features = ["serde"] }

@@ -1,0 +1,16 @@
+[package]
+name = "webgame_client"
+version = "0.1.0"
+authors = ["Armin Ronacher <armin.ronacher@active-4.com>"]
+edition = "2018"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+yew = { version = "0.14.1", features = ["web_sys"] }
+webgame_protocol = { path = "../webgame_protocol" }
+wasm-bindgen = "0.2.59"
+web_logger = "0.2.0"
+log = "0.4.8"
+console_error_panic_hook = "0.1.6"

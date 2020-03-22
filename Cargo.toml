@@ -1,0 +1,2 @@
+[workspace]
+members = ["webgame_server", "webgame_protocol", "webgame_client"]

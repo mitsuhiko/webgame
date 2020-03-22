@@ -1,0 +1,16 @@
+[package]
+name = "webgame_server"
+version = "0.1.0"
+authors = ["Armin Ronacher <armin.ronacher@active-4.com>"]
+edition = "2018"
+
+[dependencies]
+warp = "0.2.2"
+futures = "0.3.4"
+tokio = { version = "0.2.13", features = ["macros"] }
+pretty_env_logger = "0.4.0"
+serde_json = "1.0.48"
+
+webgame_protocol = { path = "../webgame_protocol" }
+uuid = { version = "0.8.1", features = ["v4"] }
+log = "0.4.8"
