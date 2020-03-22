@@ -1,8 +1,8 @@
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
-use crate::player::Player;
+use crate::player::PlayerInfo;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct GameStateSnapshot {
-    pub players: Vec<Player>,
+    pub players: Vec<PlayerInfo>,
 }

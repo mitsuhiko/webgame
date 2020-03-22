@@ -1615,8 +1615,10 @@ dependencies = [
 name = "webgame_client"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "console_error_panic_hook",
  "log 0.4.8",
+ "uuid",
  "wasm-bindgen",
  "web_logger",
  "webgame_protocol",
@@ -1638,6 +1640,7 @@ dependencies = [
  "futures",
  "log 0.4.8",
  "pretty_env_logger",
+ "rand 0.7.3",
  "serde_json",
  "tokio",
  "uuid",

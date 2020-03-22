@@ -8,23 +8,23 @@ module.exports = (env, argv) => {
     devServer: {
       contentBase: distPath,
       compress: argv.mode === 'production',
-      port: 8001
+      port: 8001,
     },
     entry: './bootstrap.js',
     output: {
       path: distPath,
       filename: "webgame.js",
-      webassemblyModuleFilename: "webgame.wasm"
+      webassemblyModuleFilename: "webgame.wasm",
     },
     plugins: [
       new CopyWebpackPlugin([
-        { from: './static', to: distPath }
+        { from: './static', to: distPath },
       ]),
       new WasmPackPlugin({
         crateDirectory: ".",
         extraArgs: "--no-typescript",
-      })
+      }),
     ],
-    watch: argv.mode !== 'production'
+    watch: argv.mode !== 'production',
   };
 };
