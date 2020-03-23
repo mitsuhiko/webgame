@@ -1618,6 +1618,7 @@ dependencies = [
  "anyhow",
  "console_error_panic_hook",
  "log 0.4.8",
+ "serde",
  "uuid",
  "wasm-bindgen",
  "web_logger",

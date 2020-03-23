@@ -1,94 +1,66 @@
-use uuid::Uuid;
+use yew::agent::Bridged;
+use yew::{html, Bridge, Component, ComponentLink, Html, ShouldRender};
 
-use yew::format::Json;
-use yew::services::websocket::{WebSocketService, WebSocketStatus, WebSocketTask};
-use yew::{html, Component, ComponentLink, Html, InputData, ShouldRender};
+use crate::api::Api;
+use crate::protocol::{GameInfo, Message, PlayerInfo};
+use crate::views::game::{GamePage, GamePageCommand};
+use crate::views::menu::MenuPage;
+use crate::views::start::StartPage;
 
-use webgame_protocol::{AuthenticateRequest, Packet, Request, Response, SuccessResponse};
-
-pub struct Model {
+pub struct App {
+    _api: Box<dyn Bridge<Api>>,
     link: ComponentLink<Self>,
-    ws: Option<WebSocketTask>,
-    ws_service: WebSocketService,
-    nickname: String,
-    player_id: Uuid,
+    state: AppState,
+    player_info: Option<PlayerInfo>,
+    game_info: Option<GameInfo>,
+}
+
+#[derive(Debug)]
+enum AppState {
+    Start,
+    Authenticated,
+    InGame,
 }
 
 pub enum Msg {
-    Connect,
-    Authenticate,
-    Packet(Packet),
-    Ignore,
-    ConnectionLost,
-    SetNickname(String),
+    Authenticated(PlayerInfo),
+    GameJoined(GameInfo),
+    GamePageCommand(GamePageCommand),
+    ServerMessage(Message),
 }
 
-impl Model {
-    pub fn send_request(&mut self, req: Request) {
-        self.ws.as_mut().unwrap().send(Json(&req));
-    }
-}
-
-impl Component for Model {
+impl Component for App {
     type Message = Msg;
     type Properties = ();
 
     fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
-        Model {
+        let on_server_message = link.callback(Msg::ServerMessage);
+        App {
             link,
-            ws: None,
-            ws_service: WebSocketService::new(),
-            nickname: "anonymous".into(),
-            player_id: Uuid::nil(),
+            _api: Api::bridge(on_server_message),
+            state: AppState::Start,
+            player_info: None,
+            game_info: None,
         }
     }
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         match msg {
-            Msg::Connect => {
-                log::info!("Connecting to game");
-                let on_message = self.link.callback(|Json(data)| match data {
-                    Ok(packet) => Msg::Packet(packet),
-                    Err(err) => {
-                        log::error!("websocket error: {:?}", err);
-                        Msg::Ignore
-                    }
-                });
-                let on_notification = self.link.callback(|status| match status {
-                    WebSocketStatus::Opened => Msg::Authenticate,
-                    WebSocketStatus::Closed | WebSocketStatus::Error => Msg::ConnectionLost,
-                });
-                self.ws = Some(
-                    self.ws_service
-                        .connect("ws://127.0.0.1:8002/ws", on_message, on_notification)
-                        .unwrap(),
-                );
+            Msg::Authenticated(player_info) => {
+                log::info!("Authenticated as {:?}", player_info);
+                self.state = AppState::Authenticated;
+                self.player_info = Some(player_info);
             }
-            Msg::Authenticate => {
-                self.send_request(Request::Authenticate(AuthenticateRequest {
-                    nickname: self.nickname.clone(),
-                }));
+            Msg::GameJoined(game_info) => {
+                log::info!("Joined game {:?}", game_info);
+                self.state = AppState::InGame;
+                self.game_info = Some(game_info);
             }
-            Msg::Packet(Packet::Message(message)) => {
-                log::info!("message: {:?}", message);
+            Msg::ServerMessage(Message::GameLeft) | Msg::GamePageCommand(GamePageCommand::Quit) => {
+                self.state = AppState::Authenticated;
+                self.game_info = None;
             }
-            Msg::Packet(Packet::Response(Response::Ok(result))) => {
-                log::info!("ok response: {:?}", result);
-                match result {
-                    SuccessResponse::Authenticated(data) => {
-                        self.player_id = data.player_id;
-                    }
-                    _ => {}
-                }
-            }
-            Msg::Packet(Packet::Response(Response::Error(error))) => {
-                log::error!("request resulted in an error: {:?}", error);
-            }
-            Msg::Ignore => {}
-            Msg::ConnectionLost => {}
-            Msg::SetNickname(nickname) => {
-                self.nickname = nickname;
-            }
+            Msg::ServerMessage(_) => {}
         }
         true
     }
@@ -96,9 +68,22 @@ impl Component for Model {
     fn view(&self) -> Html {
         html! {
             <div>
-                <input value=&self.nickname
-                oninput=self.link.callback(|e: InputData| Msg::SetNickname(e.value)) />
-                <button onclick=self.link.callback(|_| Msg::Connect)>{"Connect"}</button>
+            {match self.state {
+                AppState::Start => html! {
+                    <StartPage on_authenticate=self.link.callback(Msg::Authenticated) />
+                },
+                AppState::Authenticated => html! {
+                    <MenuPage
+                        player_info=self.player_info.as_ref().unwrap().clone(),
+                        on_game_joined=self.link.callback(Msg::GameJoined) />
+                },
+                AppState::InGame => html! {
+                    <GamePage
+                        player_info=self.player_info.as_ref().unwrap().clone(),
+                        game_info=self.game_info.as_ref().unwrap().clone(),
+                        on_game_command=self.link.callback(Msg::GamePageCommand) />
+                }
+            }}
             </div>
         }
     }

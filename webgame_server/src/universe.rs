@@ -6,7 +6,7 @@ use uuid::Uuid;
 use warp::ws;
 
 use crate::game::Game;
-use crate::protocol::{Packet, PlayerInfo, ProtocolError, ProtocolErrorKind};
+use crate::protocol::{Message, PlayerInfo, ProtocolError, ProtocolErrorKind};
 use crate::utils::generate_join_code;
 
 pub struct UniversePlayerState {
@@ -38,26 +38,21 @@ impl Universe {
     }
 
     /// Starts a new game.
-    pub async fn new_game(self: Arc<Self>) -> (Arc<Game>, String) {
-        let game = Arc::new(Game::new(self.clone()));
+    pub async fn new_game(self: Arc<Self>) -> Arc<Game> {
         let mut universe_state = self.state.write().await;
-        universe_state.games.insert(game.id(), game.clone());
 
         loop {
             let join_code = generate_join_code();
-            if let Some(game_id) = universe_state.joinable_games.get(&join_code).copied() {
-                if let Some(ref game) = universe_state.games.get(&game_id) {
-                    if game.is_joinable().await {
-                        continue;
-                    }
-                }
-                universe_state.joinable_games.remove(&join_code);
+            if universe_state.joinable_games.contains_key(&join_code) {
+                continue;
             }
 
+            let game = Arc::new(Game::new(join_code, self.clone()));
+            universe_state.games.insert(game.id(), game.clone());
             universe_state
                 .joinable_games
-                .insert(join_code.clone(), game.id());
-            return (game, join_code);
+                .insert(game.join_code().to_string(), game.id());
+            return game;
         }
     }
 
@@ -66,7 +61,7 @@ impl Universe {
         self: Arc<Self>,
         player_id: Uuid,
         join_code: String,
-    ) -> Option<Arc<Game>> {
+    ) -> Result<Arc<Game>, ProtocolError> {
         // assign to temporary to release lock.
         let game_id = self
             .state
@@ -78,11 +73,22 @@ impl Universe {
 
         if let Some(game_id) = game_id {
             if let Some(game) = self.get_game(game_id).await {
-                game.add_player(player_id).await;
-                return Some(game);
+                if game.is_joinable().await {
+                    game.add_player(player_id).await;
+                    return Ok(game);
+                } else {
+                    return Err(ProtocolError::new(
+                        ProtocolErrorKind::InvalidCommand,
+                        "game is currently not joinable",
+                    ));
+                }
             }
         }
-        None
+
+        Err(ProtocolError::new(
+            ProtocolErrorKind::NotFound,
+            "game does not exist",
+        ))
     }
 
     /// Registers a player.
@@ -198,11 +204,11 @@ impl Universe {
         }
     }
 
-    /// Send a packet to a single player.
-    pub async fn send(&self, player_id: Uuid, packet: &Packet) {
+    /// Send a message to a single player.
+    pub async fn send(&self, player_id: Uuid, message: &Message) {
         let universe_state = self.state.write().await;
         if let Some(ref state) = universe_state.players.get(&player_id) {
-            let s = serde_json::to_string(packet).unwrap();
+            let s = serde_json::to_string(message).unwrap();
             if let Err(_disconnected) = state.tx.send(Ok(ws::Message::text(s))) {
                 // The tx is disconnected, our `user_disconnected` code
                 // should be happening in another task, nothing more to

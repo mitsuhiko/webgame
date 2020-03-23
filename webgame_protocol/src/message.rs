@@ -2,61 +2,20 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::player::PlayerInfo;
+use crate::state::GameInfo;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "cmd", rename_all = "snake_case")]
-pub enum Request {
-    Authenticate(AuthenticateRequest),
-    SendText(SendTextRequest),
+pub enum Command {
+    Authenticate(AuthenticateCommand),
+    SendText(SendTextCommand),
     NewGame,
-    JoinGame(JoinGameRequest),
+    JoinGame(JoinGameCommand),
+    LeaveGame,
     MarkReady,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(tag = "status", rename_all = "snake_case")]
-pub enum Response {
-    Ok(SuccessResponse),
-    Error(ProtocolError),
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(tag = "kind", rename_all = "snake_case")]
-pub enum SuccessResponse {
-    /// Simple acknowledgement without response.
-    Ack,
-    /// Response when a new game was created.
-    NewGame(NewGameResponse),
-    /// Response when a game was joined.
-    GameJoined(GameJoinedResponse),
-    /// Response to hello.
-    Authenticated(AuthenticatedResponse),
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct NewGameResponse {
-    pub game_id: Uuid,
-    pub join_code: String,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct GameJoinedResponse {
-    pub game_id: Uuid,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct AuthenticatedResponse {
-    pub player_id: Uuid,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(tag = "packet", rename_all = "snake_case")]
-pub enum Packet {
-    Response(Response),
-    Message(Message),
-}
-
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Hash)]
 #[serde(rename_all = "snake_case")]
 pub enum ProtocolErrorKind {
     /// Client tried to authenticate twice
@@ -64,64 +23,73 @@ pub enum ProtocolErrorKind {
     /// Tried to do something while unauthenticated
     NotAuthenticated,
     /// Client sent in some garbage
-    InvalidRequest,
+    InvalidCommand,
+    /// Cannot be done at this time
+    BadState,
     /// Something wasn't found
     NotFound,
     /// This should never happen.
     InternalError,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ProtocolError {
     kind: ProtocolErrorKind,
-    message: Option<String>,
+    message: String,
 }
 
 impl ProtocolError {
     pub fn new<S: Into<String>>(kind: ProtocolErrorKind, s: S) -> ProtocolError {
         ProtocolError {
             kind,
-            message: Some(s.into()),
+            message: s.into(),
         }
+    }
+
+    pub fn kind(&self) -> ProtocolErrorKind {
+        self.kind
+    }
+
+    pub fn message(&self) -> &str {
+        &self.message
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct AuthenticateRequest {
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct AuthenticateCommand {
     pub nickname: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct SendTextRequest {
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct SendTextCommand {
     pub text: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct JoinGameRequest {
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct JoinGameCommand {
     pub join_code: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum Message {
     Chat(ChatMessage),
-    PlayerConnected(PlayerConnectedMessage),
+    PlayerConnected(PlayerInfo),
     PlayerDisconnected(PlayerDisconnectedMessage),
     PregameStarted,
+    GameJoined(GameInfo),
+    GameLeft,
+    Authenticated(PlayerInfo),
+    Error(ProtocolError),
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ChatMessage {
     pub player_id: Uuid,
     pub text: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct PlayerConnectedMessage {
-    pub player_info: PlayerInfo,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct PlayerDisconnectedMessage {
     pub player_id: Uuid,
 }

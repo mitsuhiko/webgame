@@ -6,9 +6,8 @@ use uuid::Uuid;
 use warp::{ws, Filter};
 
 use crate::protocol::{
-    AuthenticateRequest, AuthenticatedResponse, ChatMessage, GameJoinedResponse, JoinGameRequest,
-    Message, NewGameResponse, Packet, PlayerConnectedMessage, ProtocolError, ProtocolErrorKind,
-    Request, Response, SendTextRequest, SuccessResponse,
+    AuthenticateCommand, ChatMessage, Command, JoinGameCommand, Message, ProtocolError,
+    ProtocolErrorKind, SendTextCommand,
 };
 use crate::universe::Universe;
 
@@ -29,11 +28,9 @@ async fn on_player_connected(universe: Arc<Universe>, ws: ws::WebSocket) {
         match result {
             Ok(msg) => {
                 log::debug!("Got message from websocket: {:?}", &msg);
-                let resp = match on_player_message(universe.clone(), player_id, msg).await {
-                    Ok(resp) => Response::Ok(resp),
-                    Err(err) => Response::Error(err),
-                };
-                universe.send(player_id, &Packet::Response(resp)).await;
+                if let Err(err) = on_player_message(universe.clone(), player_id, msg).await {
+                    universe.send(player_id, &Message::Error(err)).await;
+                }
             }
             Err(e) => {
                 log::error!("websocket error(uid={}): {}", player_id, e);
@@ -57,44 +54,45 @@ async fn on_player_message(
     universe: Arc<Universe>,
     player_id: Uuid,
     msg: ws::Message,
-) -> Result<SuccessResponse, ProtocolError> {
+) -> Result<(), ProtocolError> {
     let req_json = match msg.to_str() {
         Ok(text) => text,
         Err(()) => {
             return Err(ProtocolError::new(
-                ProtocolErrorKind::InvalidRequest,
+                ProtocolErrorKind::InvalidCommand,
                 "not a valid text frame",
             ))
         }
     };
 
-    let req: Request = match serde_json::from_str(&req_json) {
+    let cmd: Command = match serde_json::from_str(&req_json) {
         Ok(req) => req,
         Err(err) => {
             return Err(ProtocolError::new(
-                ProtocolErrorKind::InvalidRequest,
+                ProtocolErrorKind::InvalidCommand,
                 err.to_string(),
             ));
         }
     };
 
     if !universe.player_is_authenticated(player_id).await {
-        match req {
-            Request::Authenticate(data) => on_player_authenticate(universe, player_id, data).await,
+        match cmd {
+            Command::Authenticate(data) => on_player_authenticate(universe, player_id, data).await,
             _ => Err(ProtocolError::new(
                 ProtocolErrorKind::NotAuthenticated,
                 "cannot perform this command unauthenticated",
             )),
         }
     } else {
-        match req {
-            Request::NewGame => on_new_game(universe, player_id).await,
-            Request::JoinGame(data) => on_join_game(universe, player_id, data).await,
-            Request::SendText(data) => on_player_send_text(universe, player_id, data).await,
-            Request::MarkReady => on_player_mark_ready(universe, player_id).await,
+        match cmd {
+            Command::NewGame => on_new_game(universe, player_id).await,
+            Command::JoinGame(data) => on_join_game(universe, player_id, data).await,
+            Command::LeaveGame => on_leave_game(universe, player_id).await,
+            Command::SendText(data) => on_player_send_text(universe, player_id, data).await,
+            Command::MarkReady => on_player_mark_ready(universe, player_id).await,
 
             // this should not happen here.
-            Request::Authenticate(..) => Err(ProtocolError::new(
+            Command::Authenticate(..) => Err(ProtocolError::new(
                 ProtocolErrorKind::AlreadyAuthenticated,
                 "cannot authenticate twice",
             )),
@@ -102,75 +100,74 @@ async fn on_player_message(
     }
 }
 
-async fn on_new_game(
-    universe: Arc<Universe>,
-    player_id: Uuid,
-) -> Result<SuccessResponse, ProtocolError> {
+async fn on_new_game(universe: Arc<Universe>, player_id: Uuid) -> Result<(), ProtocolError> {
     universe.remove_player_from_game(player_id).await;
-    let (game, join_code) = universe.new_game().await;
+    let game = universe.clone().new_game().await;
     game.add_player(player_id).await;
-    Ok(SuccessResponse::NewGame(NewGameResponse {
-        game_id: game.id(),
-        join_code,
-    }))
+    universe
+        .send(player_id, &Message::GameJoined(game.game_info()))
+        .await;
+    Ok(())
 }
 
 async fn on_join_game(
     universe: Arc<Universe>,
     player_id: Uuid,
-    req: JoinGameRequest,
-) -> Result<SuccessResponse, ProtocolError> {
-    if let Some(game) = universe.join_game(player_id, req.join_code).await {
-        Ok(SuccessResponse::GameJoined(GameJoinedResponse {
-            game_id: game.id(),
-        }))
-    } else {
-        Err(ProtocolError::new(
-            ProtocolErrorKind::NotFound,
-            "game was not found",
-        ))
-    }
+    cmd: JoinGameCommand,
+) -> Result<(), ProtocolError> {
+    let game = universe.clone().join_game(player_id, cmd.join_code).await?;
+    universe
+        .send(player_id, &Message::GameJoined(game.game_info()))
+        .await;
+    Ok(())
+}
+
+async fn on_leave_game(universe: Arc<Universe>, player_id: Uuid) -> Result<(), ProtocolError> {
+    universe.clone().remove_player_from_game(player_id).await;
+    universe.send(player_id, &Message::GameLeft).await;
+    Ok(())
 }
 
 async fn on_player_authenticate(
     universe: Arc<Universe>,
     player_id: Uuid,
-    req: AuthenticateRequest,
-) -> Result<SuccessResponse, ProtocolError> {
+    cmd: AuthenticateCommand,
+) -> Result<(), ProtocolError> {
     let player_info = universe
-        .authenticate_player(player_id, req.nickname)
+        .authenticate_player(player_id, cmd.nickname)
         .await?;
     log::info!(
         "player {:?} authenticated as {:?}",
         player_id,
         &player_info.nickname
     );
-    if let Some(game) = universe.get_player_game(player_id).await {
-        game.broadcast(&Packet::Message(Message::PlayerConnected(
-            PlayerConnectedMessage { player_info },
-        )))
+
+    universe
+        .send(player_id, &Message::Authenticated(player_info.clone()))
         .await;
+
+    if let Some(game) = universe.get_player_game(player_id).await {
+        game.broadcast(&Message::PlayerConnected(player_info)).await;
     }
-    Ok(SuccessResponse::Authenticated(AuthenticatedResponse {
-        player_id,
-    }))
+
+    Ok(())
 }
 
 pub async fn on_player_send_text(
     universe: Arc<Universe>,
     player_id: Uuid,
-    req: SendTextRequest,
-) -> Result<SuccessResponse, ProtocolError> {
+    cmd: SendTextCommand,
+) -> Result<(), ProtocolError> {
     if let Some(game) = universe.get_player_game(player_id).await {
-        game.broadcast(&Packet::Message(Message::Chat(ChatMessage {
+        game.broadcast(&Message::Chat(ChatMessage {
             player_id,
-            text: req.text,
-        })))
+            text: cmd.text,
+        }))
         .await;
-        Ok(SuccessResponse::Ack)
+        Ok(())
     } else {
         Err(ProtocolError::new(
-            ProtocolErrorKind::InvalidRequest,
+            ProtocolErrorKind::BadState,
             "not in a game",
         ))
     }
@@ -179,13 +176,13 @@ pub async fn on_player_send_text(
 pub async fn on_player_mark_ready(
     universe: Arc<Universe>,
     player_id: Uuid,
-) -> Result<SuccessResponse, ProtocolError> {
+) -> Result<(), ProtocolError> {
     if let Some(game) = universe.get_player_game(player_id).await {
         game.mark_player_ready(player_id).await;
-        Ok(SuccessResponse::Ack)
+        Ok(())
     } else {
         Err(ProtocolError::new(
-            ProtocolErrorKind::InvalidRequest,
+            ProtocolErrorKind::BadState,
             "not in a game",
         ))
     }

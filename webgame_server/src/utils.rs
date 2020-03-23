@@ -1,10 +1,10 @@
-use rand::{thread_rng, Rng};
+use rand::{seq::SliceRandom, thread_rng};
 
-const CHARS: &[u8; 32] = b"0123456789BCDFGHJKLMNPQRSTUVWXZY";
+const CHARS: &[u8; 30] = b"23456789BCDFGHJKLMNPQRSTUVWXZY";
 
 pub fn generate_join_code() -> String {
     let mut rng = thread_rng();
-    (0..4)
-        .map(|_| CHARS[rng.gen_range(0, 32)] as char)
+    (0..5)
+        .map(|_| *CHARS.choose(&mut rng).unwrap() as char)
         .collect()
 }
