@@ -133,9 +133,15 @@ async fn on_player_authenticate(
     player_id: Uuid,
     cmd: AuthenticateCommand,
 ) -> Result<(), ProtocolError> {
-    let player_info = universe
-        .authenticate_player(player_id, cmd.nickname)
-        .await?;
+    let nickname = cmd.nickname.trim().to_owned();
+    if nickname.is_empty() || nickname.len() > 16 {
+        return Err(ProtocolError::new(
+            ProtocolErrorKind::BadInput,
+            "nickname must be between 1 and 16 characters",
+        ));
+    }
+
+    let player_info = universe.authenticate_player(player_id, nickname).await?;
     log::info!(
         "player {:?} authenticated as {:?}",
         player_id,

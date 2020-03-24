@@ -29,6 +29,13 @@ pub struct Api {
     state: ApiState,
 }
 
+fn get_websocket_location() -> String {
+    format!(
+        "ws://{}/ws",
+        web_sys::window().unwrap().location().host().unwrap()
+    )
+}
+
 impl Agent for Api {
     type Reach = Context;
     type Message = Msg;
@@ -50,7 +57,7 @@ impl Agent for Api {
         });
         let mut ws_service = WebSocketService::new();
         let ws = ws_service
-            .connect("ws://127.0.0.1:8002/ws", on_message, on_notification)
+            .connect(&get_websocket_location(), on_message, on_notification)
             .unwrap();
 
         Api {

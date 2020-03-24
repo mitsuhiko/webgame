@@ -16,6 +16,7 @@ pub struct StartPage {
     api: Box<dyn Bridge<Api>>,
     nickname: String,
     on_authenticate: Callback<PlayerInfo>,
+    error: Option<String>,
 }
 
 pub enum Msg {
@@ -34,8 +35,9 @@ impl Component for StartPage {
         StartPage {
             link,
             api,
-            nickname: "anonymous".into(),
+            nickname: "".into(),
             on_authenticate: props.on_authenticate,
+            error: None,
         }
     }
 
@@ -53,6 +55,9 @@ impl Component for StartPage {
                     Message::Authenticated(data) => {
                         self.on_authenticate.emit(data);
                     }
+                    Message::Error(err) => {
+                        self.error = Some(err.message().to_string());
+                    }
                     _ => {}
                 }
             }
@@ -66,9 +71,25 @@ impl Component for StartPage {
     fn view(&self) -> Html {
         html! {
             <div>
-                <input value=&self.nickname
-                    oninput=self.link.callback(|e: InputData| Msg::SetNickname(e.value)) />
-                <button onclick=self.link.callback(|_| Msg::Authenticate)>{"Play"}</button>
+                <h1>{"Whatever Together"}</h1>
+                <p class="explanation">
+                    {"Give yourself a name to play:"}
+                </p>
+                <div class="toolbar">
+                    <input value=&self.nickname
+                        placeholder="nickname"
+                        oninput=self.link.callback(|e: InputData| Msg::SetNickname(e.value)) />
+                    <button onclick=self.link.callback(|_| Msg::Authenticate)>{"Play"}</button>
+                    {
+                        if let Some(ref error) = self.error {
+                            html! {
+                                <p class="error">{format!("not good: {}", error)}</p>
+                            }
+                        } else {
+                            html!{}
+                        }
+                    }
+                </div>
             </div>
         }
     }

@@ -67,7 +67,7 @@ impl Component for MenuPage {
                 _ => {}
             },
             Msg::SetJoinCode(join_code) => {
-                self.join_code = join_code;
+                self.join_code = join_code.to_uppercase();
             }
         }
         true
@@ -76,20 +76,26 @@ impl Component for MenuPage {
     fn view(&self) -> Html {
         html! {
             <div>
-                <p>{format!("Hello {} [{}]", &self.player_info.nickname, &self.player_info.id)}</p>
-                <button onclick=self.link.callback(|_| Msg::NewGame)>{"New Game"}</button>
-                <input value=&self.join_code
-                    oninput=self.link.callback(|e: InputData| Msg::SetJoinCode(e.value)) />
-                <button onclick=self.link.callback(|_| Msg::JoinGame)>{"Join Game"}</button>
-                {
-                    if let Some(ref error) = self.error {
-                        html! {
-                            <p>{format!("uh oh: {}", error)}</p>
+                <h1>{"Let's get started"}</h1>
+                <p class="intro">{format!("Hello {}!", &self.player_info.nickname)}</p>
+                <p class="explanation">{"Start a new game or enter the code of a game to join."}</p>
+                <div class="toolbar">
+                    <button onclick=self.link.callback(|_| Msg::NewGame)>{"New Game"}</button>
+                    <input value=&self.join_code
+                        size="6"
+                        placeholder="CODE1"
+                        oninput=self.link.callback(|e: InputData| Msg::SetJoinCode(e.value)) />
+                    <button onclick=self.link.callback(|_| Msg::JoinGame)>{"Join Game"}</button>
+                    {
+                        if let Some(ref error) = self.error {
+                            html! {
+                                <p class="error">{format!("uh oh: {}", error)}</p>
+                            }
+                        } else {
+                            html!{}
                         }
-                    } else {
-                        html!{}
                     }
-                }
+                </div>
             </div>
         }
     }

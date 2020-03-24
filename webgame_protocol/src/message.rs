@@ -28,6 +28,8 @@ pub enum ProtocolErrorKind {
     BadState,
     /// Something wasn't found
     NotFound,
+    /// Invalid input.
+    BadInput,
     /// This should never happen.
     InternalError,
 }

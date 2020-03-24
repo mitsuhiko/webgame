@@ -8,7 +8,15 @@ module.exports = (env, argv) => {
     devServer: {
       contentBase: distPath,
       compress: argv.mode === 'production',
+      host: '0.0.0.0',
       port: 8001,
+      proxy: {
+        "/ws": {
+          target: "http://127.0.0.1:8002",
+          changeOrigin: true,
+          ws: true,
+        }
+      },
     },
     entry: './bootstrap.js',
     output: {
@@ -17,9 +25,10 @@ module.exports = (env, argv) => {
       webassemblyModuleFilename: "webgame.wasm",
     },
     plugins: [
-      new CopyWebpackPlugin([
-        { from: './static', to: distPath },
-      ]),
+      new CopyWebpackPlugin([{
+        from: './static',
+        to: distPath
+      }, ]),
       new WasmPackPlugin({
         crateDirectory: ".",
         extraArgs: "--no-typescript",

@@ -67,7 +67,7 @@ impl Component for App {
 
     fn view(&self) -> Html {
         html! {
-            <div>
+            <div class="game">
             {match self.state {
                 AppState::Start => html! {
                     <StartPage on_authenticate=self.link.callback(Msg::Authenticated) />
