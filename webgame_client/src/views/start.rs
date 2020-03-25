@@ -1,6 +1,7 @@
 use yew::agent::Bridged;
 use yew::{
-    html, Bridge, Callback, Component, ComponentLink, Html, InputData, Properties, ShouldRender,
+    html, Bridge, Callback, Component, ComponentLink, Html, InputData, KeyboardEvent, Properties,
+    ShouldRender,
 };
 
 use crate::api::Api;
@@ -23,6 +24,7 @@ pub enum Msg {
     Authenticate,
     ServerMessage(Message),
     SetNickname(String),
+    Ignore,
 }
 
 impl Component for StartPage {
@@ -64,6 +66,7 @@ impl Component for StartPage {
             Msg::SetNickname(nickname) => {
                 self.nickname = nickname;
             }
+            Msg::Ignore => {}
         }
         true
     }
@@ -78,8 +81,17 @@ impl Component for StartPage {
                 <div class="toolbar">
                     <input value=&self.nickname
                         placeholder="nickname"
+                        onkeypress=self.link.callback(|event: KeyboardEvent| {
+                            dbg!(event.key());
+                            if event.key() == "Enter" {
+                                Msg::Authenticate
+                            } else {
+                                Msg::Ignore
+                            }
+                        })
                         oninput=self.link.callback(|e: InputData| Msg::SetNickname(e.value)) />
-                    <button onclick=self.link.callback(|_| Msg::Authenticate)>{"Play"}</button>
+                    <button
+                        onclick=self.link.callback(|_| Msg::Authenticate)>{"Play"}</button>
                     {
                         if let Some(ref error) = self.error {
                             html! {

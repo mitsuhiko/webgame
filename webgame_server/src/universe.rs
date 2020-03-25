@@ -38,7 +38,7 @@ impl Universe {
     }
 
     /// Starts a new game.
-    pub async fn new_game(self: Arc<Self>) -> Arc<Game> {
+    pub async fn new_game(self: &Arc<Self>) -> Arc<Game> {
         let mut universe_state = self.state.write().await;
 
         loop {
@@ -58,7 +58,7 @@ impl Universe {
 
     /// Joins a player into a game by join code.
     pub async fn join_game(
-        self: Arc<Self>,
+        &self,
         player_id: Uuid,
         join_code: String,
     ) -> Result<Arc<Game>, ProtocolError> {
@@ -184,6 +184,12 @@ impl Universe {
     pub async fn get_game(&self, game_id: Uuid) -> Option<Arc<Game>> {
         let universe_state = self.state.read().await;
         universe_state.games.get(&game_id).cloned()
+    }
+
+    /// Removes a game from the universe.
+    pub async fn remove_game(&self, game_id: Uuid) -> bool {
+        let mut universe_state = self.state.write().await;
+        universe_state.games.remove(&game_id).is_some()
     }
 
     /// Returns the game a player is in.

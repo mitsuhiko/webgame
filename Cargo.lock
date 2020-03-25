@@ -592,6 +592,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dea0c0405123bba743ee3f91f49b1c7cfb684eef0da0a50110f758ccf24cdff0"
 
 [[package]]
+name = "listenfd"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "492158e732f2e2de81c592f0a2427e57e12cd3d59877378fe7af624b6bbe0ca1"
+dependencies = [
+ "libc",
+ "uuid 0.6.5",
+ "winapi 0.3.8",
+]
+
+[[package]]
 name = "log"
 version = "0.3.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1462,6 +1473,15 @@ checksum = "05e42f7c18b8f902290b009cde6d651262f956c98bc51bca4cd1d511c9cd85c7"
 
 [[package]]
 name = "uuid"
+version = "0.6.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e1436e58182935dcd9ce0add9ea0b558e8a87befe01c1a301e6020aeb0876363"
+dependencies = [
+ "cfg-if",
+]
+
+[[package]]
+name = "uuid"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9fde2f6a4bea1d6e007c4ad38c6839fa71cbb63b6dbf5b595aa38dc9b1093c11"
@@ -1619,7 +1639,7 @@ dependencies = [
  "console_error_panic_hook",
  "log 0.4.8",
  "serde",
- "uuid",
+ "uuid 0.8.1",
  "wasm-bindgen",
  "web-sys",
  "web_logger",
@@ -1632,7 +1652,7 @@ name = "webgame_protocol"
 version = "0.1.0"
 dependencies = [
  "serde",
- "uuid",
+ "uuid 0.8.1",
 ]
 
 [[package]]
@@ -1640,12 +1660,14 @@ name = "webgame_server"
 version = "0.1.0"
 dependencies = [
  "futures",
+ "hyper",
+ "listenfd",
  "log 0.4.8",
  "pretty_env_logger",
  "rand 0.7.3",
  "serde_json",
  "tokio",
- "uuid",
+ "uuid 0.8.1",
  "warp",
  "webgame_protocol",
 ]

@@ -4,7 +4,8 @@ use std::mem;
 use uuid::Uuid;
 use yew::agent::Bridged;
 use yew::{
-    html, Bridge, Callback, Component, ComponentLink, Html, InputData, Properties, ShouldRender,
+    html, Bridge, Callback, Component, ComponentLink, Html, InputData, KeyboardEvent, Properties,
+    ShouldRender,
 };
 
 use crate::api::Api;
@@ -33,6 +34,7 @@ pub struct GamePage {
 }
 
 pub enum Msg {
+    Ignore,
     Disconnect,
     SendChat,
     SetChatLine(String),
@@ -91,6 +93,7 @@ impl Component for GamePage {
                 self.api.send(Command::LeaveGame);
                 self.on_game_command.emit(GamePageCommand::Quit);
             }
+            Msg::Ignore => {}
         }
         true
     }
@@ -108,6 +111,14 @@ impl Component for GamePage {
                 <div class="toolbar">
                     <input value=&self.chat_line
                         placeholder="send some text"
+                        size="30"
+                        onkeypress=self.link.callback(|event: KeyboardEvent| {
+                            if event.key() == "Enter" {
+                                Msg::SendChat
+                            } else {
+                                Msg::Ignore
+                            }
+                        })
                         oninput=self.link.callback(|e: InputData| Msg::SetChatLine(e.value)) />
                     <button onclick=self.link.callback(|_| Msg::SendChat)>{"Send"}</button>
                 </div>

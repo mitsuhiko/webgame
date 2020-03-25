@@ -1,6 +1,7 @@
 use yew::agent::Bridged;
 use yew::{
-    html, Bridge, Callback, Component, ComponentLink, Html, InputData, Properties, ShouldRender,
+    html, Bridge, Callback, Component, ComponentLink, Html, InputData, KeyboardEvent, Properties,
+    ShouldRender,
 };
 
 use crate::api::Api;
@@ -22,6 +23,7 @@ pub struct MenuPage {
 }
 
 pub enum Msg {
+    Ignore,
     NewGame,
     JoinGame,
     ServerMessage(Message),
@@ -69,6 +71,7 @@ impl Component for MenuPage {
             Msg::SetJoinCode(join_code) => {
                 self.join_code = join_code.to_uppercase();
             }
+            Msg::Ignore => {}
         }
         true
     }
@@ -84,6 +87,14 @@ impl Component for MenuPage {
                     <input value=&self.join_code
                         size="6"
                         placeholder="CODE1"
+                        onkeypress=self.link.callback(|event: KeyboardEvent| {
+                            dbg!(event.key());
+                            if event.key() == "Enter" {
+                                Msg::JoinGame
+                            } else {
+                                Msg::Ignore
+                            }
+                        })
                         oninput=self.link.callback(|e: InputData| Msg::SetJoinCode(e.value)) />
                     <button onclick=self.link.callback(|_| Msg::JoinGame)>{"Join Game"}</button>
                     {

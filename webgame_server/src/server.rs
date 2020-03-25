@@ -1,6 +1,8 @@
+use std::convert::Infallible;
 use std::sync::Arc;
 
 use futures::{FutureExt, StreamExt};
+use hyper::{service::make_service_fn, Server};
 use tokio::sync::mpsc;
 use uuid::Uuid;
 use warp::{ws, Filter};
@@ -102,7 +104,7 @@ async fn on_player_message(
 
 async fn on_new_game(universe: Arc<Universe>, player_id: Uuid) -> Result<(), ProtocolError> {
     universe.remove_player_from_game(player_id).await;
-    let game = universe.clone().new_game().await;
+    let game = universe.new_game().await;
     game.add_player(player_id).await;
     universe
         .send(player_id, &Message::GameJoined(game.game_info()))
@@ -115,7 +117,7 @@ async fn on_join_game(
     player_id: Uuid,
     cmd: JoinGameCommand,
 ) -> Result<(), ProtocolError> {
-    let game = universe.clone().join_game(player_id, cmd.join_code).await?;
+    let game = universe.join_game(player_id, cmd.join_code).await?;
     universe
         .send(player_id, &Message::GameJoined(game.game_info()))
         .await;
@@ -123,7 +125,7 @@ async fn on_join_game(
 }
 
 async fn on_leave_game(universe: Arc<Universe>, player_id: Uuid) -> Result<(), ProtocolError> {
-    universe.clone().remove_player_from_game(player_id).await;
+    universe.remove_player_from_game(player_id).await;
     universe.send(player_id, &Message::GameLeft).await;
     Ok(())
 }
@@ -197,12 +199,23 @@ pub async fn on_player_mark_ready(
 pub async fn serve() {
     let universe = Arc::new(Universe::new());
 
-    let routes = warp::path("ws")
-        .and(warp::ws())
-        .and(warp::any().map(move || universe.clone()))
-        .map(|ws: warp::ws::Ws, universe: Arc<Universe>| {
-            ws.on_upgrade(move |ws| on_player_connected(universe, ws))
-        });
+    let make_svc = make_service_fn(move |_| {
+        let universe = universe.clone();
+        let routes = warp::path("ws")
+            .and(warp::ws())
+            .and(warp::any().map(move || universe.clone()))
+            .map(|ws: warp::ws::Ws, universe: Arc<Universe>| {
+                ws.on_upgrade(move |ws| on_player_connected(universe, ws))
+            });
+        let svc = warp::service(routes);
+        async move { Ok::<_, Infallible>(svc) }
+    });
 
-    warp::serve(routes).run(([127, 0, 0, 1], 8002)).await;
+    let mut listenfd = listenfd::ListenFd::from_env();
+    let server = if let Some(l) = listenfd.take_tcp_listener(0).unwrap() {
+        Server::from_tcp(l).unwrap()
+    } else {
+        Server::bind(&([127, 0, 0, 1], 8002).into())
+    };
+    server.serve(make_svc).await.unwrap();
 }

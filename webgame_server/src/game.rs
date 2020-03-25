@@ -106,6 +106,10 @@ impl Game {
             }))
             .await;
         }
+
+        if self.is_empty().await {
+            self.universe().remove_game(self.id()).await;
+        }
     }
 
     pub async fn mark_player_ready(&self, player_id: Uuid) {
@@ -126,5 +130,9 @@ impl Game {
         for player_state in game_state.players.values() {
             universe.send(player_state.player_id, message).await;
         }
+    }
+
+    pub async fn is_empty(&self) -> bool {
+        self.game_state.lock().await.players.is_empty()
     }
 }
