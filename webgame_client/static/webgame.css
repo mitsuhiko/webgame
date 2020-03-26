@@ -1,24 +1,34 @@
 @import url("https://fonts.googleapis.com/css?family=Inter:300,400,500,700&display=swap");
-@import url("https://fonts.googleapis.com/css?family=Courier+Prime&display=swap");
+@import url("https://fonts.googleapis.com/css?family=Courier+Prime:400,700&display=swap");
+
+html {
+  height: 100%;
+}
 
 body {
   font-family: "Inter", sans-serif;
   font-size: 18px;
   margin: 0;
-  padding: 0;
-  background: white;
+  background: rgb(233, 233, 233);
+  background: linear-gradient(
+    0deg,
+    rgba(233, 233, 233, 1) 0%,
+    rgba(189, 179, 169, 1) 100%
+  );
 }
 
 input,
-button {
+button,
+div.toolbar span {
+  display: inline-block;
   font-family: "Inter", sans-serif;
   font-size: 18px;
-  line-height: 32px !important;
+  line-height: 40px !important;
   outline: none;
-  border: 1px solid black;
+  border: 2px solid black;
   border-radius: 4px;
-  padding: 0 10px;
-  vertical-align: bottom;
+  padding: 0 12px;
+  vertical-align: middle;
   background: white;
   color: black;
   margin: 0;
@@ -27,7 +37,20 @@ button {
 
 input {
   font-family: "Courier Prime", monospace;
-  background: #eee;
+  font-weight: 700;
+  background: rgb(244, 244, 244);
+  background: linear-gradient(
+    0deg,
+    rgba(244, 244, 244, 1) 0%,
+    rgba(242, 238, 233, 1) 100%
+  );
+  padding-top: 4px;
+  line-height: 36px !important;
+}
+
+button.primary {
+  background: rgb(245, 130, 7);
+  color: white;
 }
 
 button {
@@ -41,26 +64,51 @@ button:hover {
 }
 
 h1 {
-  font-weight: 300;
+  font-weight: 400;
   margin: 0 0 12px 0;
   padding: 0;
 }
 
 div.game {
+  overflow: visible;
+}
+
+div.game,
+div.box {
   background: white;
-  border: 1px solid black;
+  border: 2px solid black;
   margin: 30px;
   padding: 20px;
+  border-radius: 3px;
+}
+
+div.box {
+  padding: 8px;
+  margin: 8px 0;
+}
+
+div.box h2 {
+  margin: -8px -8px 8px -8px;
+  padding: 8px 10px;
+  font-size: 15px;
+  font-weight: 700;
+  background: black;
+  color: white;
+}
+
+div.box ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+div.box li {
+  margin: 0;
+  padding: 0;
 }
 
 p {
   margin: 12px 0;
-}
-
-p.explanation {
-}
-
-p.intro {
 }
 
 p.error {
@@ -69,18 +117,34 @@ p.error {
 }
 
 div.toolbar * {
-  margin: 16px 0;
-  border-top-right-radius: 0;
-  border-bottom-right-radius: 0;
+  margin: 8px 0 !important;
+  border-top-right-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
 }
 
 div.toolbar * + * {
-  border-left: none;
-  border-top-left-radius: 0;
-  border-bottom-left-radius: 0;
+  border-left: none !important;
+  border-top-left-radius: 0 !important;
+  border-bottom-left-radius: 0 !important;
 }
 
 div.toolbar *:last-child {
-  border-top-right-radius: 4px;
-  border-bottom-right-radius: 4px;
+  border-top-right-radius: 4px !important;
+  border-bottom-right-radius: 4px !important;
+}
+
+div.toolbar span {
+  background: #eee;
+}
+
+div.players {
+  width: 300px;
+  float: right;
+  margin-top: 0;
+}
+
+div.chat {
+  font-family: "Courier Prime", monospace;
+  margin-top: 0;
+  margin-right: 330px;
 }

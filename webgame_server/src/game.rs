@@ -4,7 +4,7 @@ use tokio::sync::Mutex;
 
 use uuid::Uuid;
 
-use crate::protocol::{GameInfo, Message, PlayerDisconnectedMessage};
+use crate::protocol::{GameInfo, GameStateSnapshot, Message, PlayerDisconnectedMessage};
 use crate::universe::Universe;
 
 enum GameProgression {
@@ -55,6 +55,18 @@ impl Game {
             game_id: self.id,
             join_code: self.join_code.to_string(),
         }
+    }
+
+    pub async fn snapshot(&self) -> GameStateSnapshot {
+        let state = self.game_state.lock().await;
+        let universe = self.universe();
+        let mut players = vec![];
+        for (&player_id, _state) in state.players.iter() {
+            if let Some(player_info) = universe.get_player_info(player_id).await {
+                players.push(player_info);
+            }
+        }
+        GameStateSnapshot { players }
     }
 
     pub async fn is_joinable(&self) -> bool {

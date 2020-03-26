@@ -1,6 +1,7 @@
-use std::collections::VecDeque;
 use std::mem;
+use std::rc::Rc;
 
+use im_rc::{HashMap, Vector};
 use uuid::Uuid;
 use yew::agent::Bridged;
 use yew::{
@@ -9,6 +10,8 @@ use yew::{
 };
 
 use crate::api::Api;
+use crate::components::chat_box::{ChatBox, ChatLine, ChatLineData};
+use crate::components::player_list::PlayerList;
 use crate::protocol::{Command, GameInfo, Message, PlayerInfo, SendTextCommand};
 
 #[derive(Clone, Debug)]
@@ -28,22 +31,29 @@ pub struct GamePage {
     api: Box<dyn Bridge<Api>>,
     game_info: GameInfo,
     player_info: PlayerInfo,
+    players: HashMap<Uuid, Rc<PlayerInfo>>,
     chat_line: String,
-    chat_log: VecDeque<String>,
+    chat_log: Vector<Rc<ChatLine>>,
     on_game_command: Callback<GamePageCommand>,
 }
 
 pub enum Msg {
     Ignore,
-    Disconnect,
     SendChat,
     SetChatLine(String),
     ServerMessage(Message),
 }
 
 impl GamePage {
-    pub fn add_chat_message(&mut self, player_id: Uuid, text: &str) {
-        self.chat_log.push_back(format!("<{}> {}", player_id, text));
+    pub fn add_chat_message(&mut self, player_id: Uuid, data: ChatLineData) {
+        let nickname = self
+            .players
+            .get(&player_id)
+            .map(|x| x.nickname.as_str())
+            .unwrap_or("anonymous")
+            .to_string();
+        self.chat_log
+            .push_back(Rc::new(ChatLine { nickname, data }));
         while self.chat_log.len() > 20 {
             self.chat_log.pop_front();
         }
@@ -61,9 +71,13 @@ impl Component for GamePage {
             link,
             api,
             game_info: props.game_info,
-            player_info: props.player_info,
             chat_line: "".into(),
-            chat_log: VecDeque::new(),
+            chat_log: Vector::unit(Rc::new(ChatLine {
+                nickname: props.player_info.nickname.clone(),
+                data: ChatLineData::Connected,
+            })),
+            players: HashMap::unit(props.player_info.id, Rc::new(props.player_info.clone())),
+            player_info: props.player_info,
             on_game_command: props.on_game_command,
         }
     }
@@ -72,13 +86,23 @@ impl Component for GamePage {
         match msg {
             Msg::ServerMessage(message) => match message {
                 Message::Chat(msg) => {
-                    self.add_chat_message(msg.player_id, &msg.text);
+                    self.add_chat_message(msg.player_id, ChatLineData::Text(msg.text));
                 }
                 Message::PlayerConnected(info) => {
-                    self.add_chat_message(info.id, "*connected*");
+                    let player_id = info.id;
+                    self.players.insert(player_id, Rc::new(info));
+                    self.add_chat_message(player_id, ChatLineData::Connected);
                 }
                 Message::PlayerDisconnected(msg) => {
-                    self.add_chat_message(msg.player_id, "*disconnected*");
+                    self.add_chat_message(msg.player_id, ChatLineData::Disconnected);
+                    self.players.remove(&msg.player_id);
+                }
+                Message::GameStateSnapshot(snapshot) => {
+                    self.players = snapshot
+                        .players
+                        .into_iter()
+                        .map(|x| (x.id, Rc::new(x)))
+                        .collect();
                 }
                 _ => {}
             },
@@ -89,10 +113,6 @@ impl Component for GamePage {
             Msg::SetChatLine(text) => {
                 self.chat_line = text;
             }
-            Msg::Disconnect => {
-                self.api.send(Command::LeaveGame);
-                self.on_game_command.emit(GamePageCommand::Quit);
-            }
             Msg::Ignore => {}
         }
         true
@@ -101,14 +121,11 @@ impl Component for GamePage {
     fn view(&self) -> Html {
         html! {
             <div>
-                <h1>{"In Game!"}</h1>
-                <pre>{format!("{:#?}", &self.game_info)}</pre>
-                <pre>{format!("{:#?}", &self.player_info)}</pre>
-                <pre>{self.chat_log
-                    .iter()
-                    .map(|x| format!("{}\n", x))
-                    .collect::<String>()}</pre>
+                <h1>{format!("Game ({})", &self.game_info.join_code)}</h1>
+                <PlayerList players=self.players.clone()/>
+                <ChatBox log=self.chat_log.clone()/>
                 <div class="toolbar">
+                    <span>{format!("{}: ", &self.player_info.nickname)}</span>
                     <input value=&self.chat_line
                         placeholder="send some text"
                         size="30"
@@ -120,9 +137,8 @@ impl Component for GamePage {
                             }
                         })
                         oninput=self.link.callback(|e: InputData| Msg::SetChatLine(e.value)) />
-                    <button onclick=self.link.callback(|_| Msg::SendChat)>{"Send"}</button>
+                    <button class="primary" onclick=self.link.callback(|_| Msg::SendChat)>{"Send"}</button>
                 </div>
-                <button onclick=self.link.callback(|_| Msg::Disconnect)>{"Disconnect"}</button>
             </div>
         }
     }

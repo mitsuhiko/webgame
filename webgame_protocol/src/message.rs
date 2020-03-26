@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::player::PlayerInfo;
-use crate::state::GameInfo;
+use crate::state::{GameInfo, GameStateSnapshot};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "cmd", rename_all = "snake_case")]
@@ -13,6 +13,7 @@ pub enum Command {
     JoinGame(JoinGameCommand),
     LeaveGame,
     MarkReady,
+    RequestGameStateSnapshot,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Hash)]
@@ -83,6 +84,7 @@ pub enum Message {
     GameLeft,
     Authenticated(PlayerInfo),
     Error(ProtocolError),
+    GameStateSnapshot(GameStateSnapshot),
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

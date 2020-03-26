@@ -97,16 +97,16 @@ impl Component for MenuPage {
                         })
                         oninput=self.link.callback(|e: InputData| Msg::SetJoinCode(e.value)) />
                     <button onclick=self.link.callback(|_| Msg::JoinGame)>{"Join Game"}</button>
-                    {
-                        if let Some(ref error) = self.error {
-                            html! {
-                                <p class="error">{format!("uh oh: {}", error)}</p>
-                            }
-                        } else {
-                            html!{}
-                        }
-                    }
                 </div>
+                {
+                    if let Some(ref error) = self.error {
+                        html! {
+                            <p class="error">{format!("uh oh: {}", error)}</p>
+                        }
+                    } else {
+                        html!{}
+                    }
+                }
             </div>
         }
     }

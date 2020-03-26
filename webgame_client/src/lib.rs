@@ -2,6 +2,7 @@
 
 mod api;
 mod app;
+mod components;
 mod views;
 
 use wasm_bindgen::prelude::*;

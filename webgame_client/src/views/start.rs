@@ -46,23 +46,19 @@ impl Component for StartPage {
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         match msg {
             Msg::Authenticate => {
-                log::info!("Authenticating");
                 self.api.send(Command::Authenticate(AuthenticateCommand {
                     nickname: self.nickname.clone(),
                 }));
             }
-            Msg::ServerMessage(message) => {
-                log::info!("message: {:?}", message);
-                match message {
-                    Message::Authenticated(data) => {
-                        self.on_authenticate.emit(data);
-                    }
-                    Message::Error(err) => {
-                        self.error = Some(err.message().to_string());
-                    }
-                    _ => {}
+            Msg::ServerMessage(message) => match message {
+                Message::Authenticated(data) => {
+                    self.on_authenticate.emit(data);
                 }
-            }
+                Message::Error(err) => {
+                    self.error = Some(err.message().to_string());
+                }
+                _ => {}
+            },
             Msg::SetNickname(nickname) => {
                 self.nickname = nickname;
             }
@@ -91,17 +87,18 @@ impl Component for StartPage {
                         })
                         oninput=self.link.callback(|e: InputData| Msg::SetNickname(e.value)) />
                     <button
+                        class="primary"
                         onclick=self.link.callback(|_| Msg::Authenticate)>{"Play"}</button>
-                    {
-                        if let Some(ref error) = self.error {
-                            html! {
-                                <p class="error">{format!("not good: {}", error)}</p>
-                            }
-                        } else {
-                            html!{}
-                        }
-                    }
                 </div>
+                {
+                    if let Some(ref error) = self.error {
+                        html! {
+                            <p class="error">{format!("not good: {}", error)}</p>
+                        }
+                    } else {
+                        html!{}
+                    }
+                }
             </div>
         }
     }

@@ -92,6 +92,9 @@ async fn on_player_message(
             Command::LeaveGame => on_leave_game(universe, player_id).await,
             Command::SendText(data) => on_player_send_text(universe, player_id, data).await,
             Command::MarkReady => on_player_mark_ready(universe, player_id).await,
+            Command::RequestGameStateSnapshot => {
+                on_player_request_game_state_snapshot(universe, player_id).await
+            }
 
             // this should not happen here.
             Command::Authenticate(..) => Err(ProtocolError::new(
@@ -120,6 +123,12 @@ async fn on_join_game(
     let game = universe.join_game(player_id, cmd.join_code).await?;
     universe
         .send(player_id, &Message::GameJoined(game.game_info()))
+        .await;
+    universe
+        .send(
+            player_id,
+            &Message::GameStateSnapshot(game.snapshot().await),
+        )
         .await;
     Ok(())
 }
@@ -187,6 +196,26 @@ pub async fn on_player_mark_ready(
 ) -> Result<(), ProtocolError> {
     if let Some(game) = universe.get_player_game(player_id).await {
         game.mark_player_ready(player_id).await;
+        Ok(())
+    } else {
+        Err(ProtocolError::new(
+            ProtocolErrorKind::BadState,
+            "not in a game",
+        ))
+    }
+}
+
+pub async fn on_player_request_game_state_snapshot(
+    universe: Arc<Universe>,
+    player_id: Uuid,
+) -> Result<(), ProtocolError> {
+    if let Some(game) = universe.get_player_game(player_id).await {
+        universe
+            .send(
+                player_id,
+                &Message::GameStateSnapshot(game.snapshot().await),
+            )
+            .await;
         Ok(())
     } else {
         Err(ProtocolError::new(

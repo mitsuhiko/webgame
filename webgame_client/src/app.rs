@@ -47,12 +47,10 @@ impl Component for App {
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         match msg {
             Msg::Authenticated(player_info) => {
-                log::info!("Authenticated as {:?}", player_info);
                 self.state = AppState::Authenticated;
                 self.player_info = Some(player_info);
             }
             Msg::GameJoined(game_info) => {
-                log::info!("Joined game {:?}", game_info);
                 self.state = AppState::InGame;
                 self.game_info = Some(game_info);
             }
