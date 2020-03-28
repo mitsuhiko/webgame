@@ -10,11 +10,9 @@ body {
   font-size: 18px;
   margin: 0;
   background: rgb(233, 233, 233);
-  background: linear-gradient(
-    0deg,
-    rgba(233, 233, 233, 1) 0%,
-    rgba(189, 179, 169, 1) 100%
-  );
+  background: linear-gradient(0deg,
+      rgba(233, 233, 233, 1) 0%,
+      rgba(189, 179, 169, 1) 100%);
 }
 
 input,
@@ -37,13 +35,11 @@ div.toolbar span {
 
 input {
   font-family: "Courier Prime", monospace;
-  font-weight: 700;
+  font-weight: 400;
   background: rgb(244, 244, 244);
-  background: linear-gradient(
-    0deg,
-    rgba(244, 244, 244, 1) 0%,
-    rgba(242, 238, 233, 1) 100%
-  );
+  background: linear-gradient(0deg,
+      rgba(244, 244, 244, 1) 0%,
+      rgba(242, 238, 233, 1) 100%);
   padding-top: 4px;
   line-height: 36px !important;
 }
@@ -122,7 +118,7 @@ div.toolbar * {
   border-bottom-right-radius: 0 !important;
 }
 
-div.toolbar * + * {
+div.toolbar *+* {
   border-left: none !important;
   border-top-left-radius: 0 !important;
   border-bottom-left-radius: 0 !important;

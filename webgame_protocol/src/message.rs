@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use crate::game::{GameInfo, GameStateSnapshot};
 use crate::player::PlayerInfo;
-use crate::state::{GameInfo, GameStateSnapshot};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "cmd", rename_all = "snake_case")]

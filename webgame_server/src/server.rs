@@ -112,6 +112,12 @@ async fn on_new_game(universe: Arc<Universe>, player_id: Uuid) -> Result<(), Pro
     universe
         .send(player_id, &Message::GameJoined(game.game_info()))
         .await;
+    universe
+        .send(
+            player_id,
+            &Message::GameStateSnapshot(game.snapshot_for(player_id).await),
+        )
+        .await;
     Ok(())
 }
 
@@ -127,7 +133,7 @@ async fn on_join_game(
     universe
         .send(
             player_id,
-            &Message::GameStateSnapshot(game.snapshot().await),
+            &Message::GameStateSnapshot(game.snapshot_for(player_id).await),
         )
         .await;
     Ok(())
@@ -213,7 +219,7 @@ pub async fn on_player_request_game_state_snapshot(
         universe
             .send(
                 player_id,
-                &Message::GameStateSnapshot(game.snapshot().await),
+                &Message::GameStateSnapshot(game.snapshot_for(player_id).await),
             )
             .await;
         Ok(())

@@ -12,7 +12,7 @@ use yew::{
 use crate::api::Api;
 use crate::components::chat_box::{ChatBox, ChatLine, ChatLineData};
 use crate::components::player_list::PlayerList;
-use crate::protocol::{Command, GameInfo, Message, PlayerInfo, SendTextCommand};
+use crate::protocol::{Command, GameInfo, Message, PlayerInfo, SendTextCommand, Tile};
 
 #[derive(Clone, Debug)]
 pub enum GamePageCommand {
@@ -32,6 +32,7 @@ pub struct GamePage {
     game_info: GameInfo,
     player_info: PlayerInfo,
     players: HashMap<Uuid, Rc<PlayerInfo>>,
+    tiles: Vec<Tile>,
     chat_line: String,
     chat_log: Vector<Rc<ChatLine>>,
     on_game_command: Callback<GamePageCommand>,
@@ -76,7 +77,8 @@ impl Component for GamePage {
                 nickname: props.player_info.nickname.clone(),
                 data: ChatLineData::Connected,
             })),
-            players: HashMap::unit(props.player_info.id, Rc::new(props.player_info.clone())),
+            tiles: Vec::new(),
+            players: HashMap::new(),
             player_info: props.player_info,
             on_game_command: props.on_game_command,
         }
@@ -98,6 +100,7 @@ impl Component for GamePage {
                     self.players.remove(&msg.player_id);
                 }
                 Message::GameStateSnapshot(snapshot) => {
+                    self.tiles = snapshot.tiles;
                     self.players = snapshot
                         .players
                         .into_iter()
@@ -124,6 +127,7 @@ impl Component for GamePage {
                 <h1>{format!("Game ({})", &self.game_info.join_code)}</h1>
                 <PlayerList players=self.players.clone()/>
                 <ChatBox log=self.chat_log.clone()/>
+                <pre>{format!("{:#?}", &self.tiles)}</pre>
                 <div class="toolbar">
                     <span>{format!("{}: ", &self.player_info.nickname)}</span>
                     <input value=&self.chat_line

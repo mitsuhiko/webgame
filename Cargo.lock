@@ -1704,6 +1704,7 @@ version = "0.1.0"
 dependencies = [
  "futures",
  "hyper",
+ "lazy_static",
  "listenfd",
  "log 0.4.8",
  "pretty_env_logger",

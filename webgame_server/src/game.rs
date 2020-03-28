@@ -4,7 +4,10 @@ use tokio::sync::Mutex;
 
 use uuid::Uuid;
 
-use crate::protocol::{GameInfo, GameStateSnapshot, Message, PlayerDisconnectedMessage};
+use crate::board::Board;
+use crate::protocol::{
+    GameInfo, GameStateSnapshot, Message, PlayerDisconnectedMessage, PlayerRole, Team,
+};
 use crate::universe::Universe;
 
 enum GameProgression {
@@ -14,12 +17,15 @@ enum GameProgression {
 
 pub struct GamePlayerState {
     player_id: Uuid,
+    role: PlayerRole,
+    team: Option<Team>,
     ready: bool,
 }
 
 pub struct GameState {
     players: BTreeMap<Uuid, GamePlayerState>,
     progression: GameProgression,
+    board: Board,
 }
 
 pub struct Game {
@@ -38,6 +44,7 @@ impl Game {
             game_state: Arc::new(Mutex::new(GameState {
                 players: BTreeMap::new(),
                 progression: GameProgression::Lobby,
+                board: Board::new(),
             })),
         }
     }
@@ -57,16 +64,23 @@ impl Game {
         }
     }
 
-    pub async fn snapshot(&self) -> GameStateSnapshot {
+    pub async fn snapshot_for(&self, player_id: Uuid) -> GameStateSnapshot {
         let state = self.game_state.lock().await;
         let universe = self.universe();
         let mut players = vec![];
-        for (&player_id, _state) in state.players.iter() {
-            if let Some(player_info) = universe.get_player_info(player_id).await {
+        let mut role = PlayerRole::Spectator;
+        for (&other_player_id, state) in state.players.iter() {
+            if player_id == other_player_id {
+                role = state.role;
+            }
+            if let Some(player_info) = universe.get_player_info(other_player_id).await {
                 players.push(player_info);
             }
         }
-        GameStateSnapshot { players }
+        GameStateSnapshot {
+            players,
+            tiles: state.board.tiles_for_role(role),
+        }
     }
 
     pub async fn is_joinable(&self) -> bool {
@@ -97,6 +111,8 @@ impl Game {
             player_id,
             GamePlayerState {
                 player_id,
+                role: PlayerRole::Spectator,
+                team: None,
                 ready: false,
             },
         );

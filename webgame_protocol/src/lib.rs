@@ -1,7 +1,7 @@
-mod player;
+mod game;
 mod message;
-mod state;
+mod player;
 
-pub use crate::player::*;
+pub use crate::game::*;
 pub use crate::message::*;
-pub use crate::state::*;
+pub use crate::player::*;
