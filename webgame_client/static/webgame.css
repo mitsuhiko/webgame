@@ -2,7 +2,7 @@
 @import url("https://fonts.googleapis.com/css?family=Courier+Prime:400,700&display=swap");
 
 html {
-  height: 100%;
+  min-height: 100%;
 }
 
 body {
@@ -46,6 +46,7 @@ input {
   );
   padding-top: 4px;
   line-height: 36px !important;
+  box-shadow: inset 5px 5px 10px -10px rgba(0, 0, 0, 0.7);
 }
 
 button.primary {
@@ -71,13 +72,15 @@ h1 {
 
 div.game {
   overflow: visible;
+  max-width: 900px;
+  margin: 30px auto;
+  box-shadow: 11px 10px 35px -14px rgba(0, 0, 0, 0.75);
 }
 
 div.game,
 div.box {
   background: white;
   border: 2px solid black;
-  margin: 30px;
   padding: 20px;
   border-radius: 3px;
 }
@@ -151,19 +154,33 @@ div.chat {
 
 div.tiles {
   margin: 18px 0;
-  background: #555;
+  background: rgb(233, 233, 233);
+  background: linear-gradient(
+    0deg,
+    rgba(233, 233, 233, 1) 0%,
+    rgba(189, 179, 169, 1) 100%
+  );
   text-align: center;
+  display: flex;
+  flex-flow: row wrap;
+  box-shadow: inset 10px 10px 22px -25px rgba(0, 0, 0, 0.8);
 }
 
 div.tiles div.tile {
-  margin: 10px;
-  padding: 30px 0;
-  display: inline-block;
-  width: 18%;
-  border: 2px solid black;
+  margin: 8px;
+  padding: 20px 0;
+  width: calc((100% / 5) - 20px);
+  border: 2px solid #555;
   border-radius: 4px;
   text-align: center;
   background: #eee;
-  font-size: 120%;
+  font-size: 90%;
   font-weight: 700;
+  cursor: default;
+  background-image: url(paper.png);
+  box-shadow: 5px 5px 25px -15px rgba(0, 0, 0, 0.75);
+  text-transform: uppercase;
+  color: black;
+  opacity: 0.9;
+  text-shadow: 0 0 5px rgba(255, 255, 255, 1);
 }

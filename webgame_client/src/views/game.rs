@@ -125,8 +125,6 @@ impl Component for GamePage {
         html! {
             <div>
                 <h1>{format!("Game ({})", &self.game_info.join_code)}</h1>
-                <PlayerList players=self.players.clone()/>
-                <ChatBox log=self.chat_log.clone()/>
                 <div class="box tiles">
                 {
                     self.tiles.iter().map(|tile| html! {
@@ -136,6 +134,8 @@ impl Component for GamePage {
                     }).collect::<Html>()
                 }
                 </div>
+                <PlayerList players=self.players.clone()/>
+                <ChatBox log=self.chat_log.clone()/>
                 <div class="toolbar">
                     <span>{format!("{}: ", &self.player_info.nickname)}</span>
                     <input value=&self.chat_line
