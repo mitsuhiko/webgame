@@ -12,7 +12,8 @@ use yew::{
 use crate::api::Api;
 use crate::components::chat_box::{ChatBox, ChatLine, ChatLineData};
 use crate::components::player_list::PlayerList;
-use crate::protocol::{Command, GameInfo, Message, PlayerInfo, SendTextCommand, Tile};
+use crate::protocol::{Character, Command, GameInfo, Message, PlayerInfo, SendTextCommand, Tile};
+use crate::utils::format_join_code;
 
 #[derive(Clone, Debug)]
 pub enum GamePageCommand {
@@ -58,6 +59,16 @@ impl GamePage {
         while self.chat_log.len() > 20 {
             self.chat_log.pop_front();
         }
+    }
+}
+
+fn get_tile_class(tile: &Tile) -> &'static str {
+    match tile.character {
+        Character::BlueAgent => "tile blue-agent",
+        Character::RedAgent => "tile red-agent",
+        Character::Bystander => "tile bystander",
+        Character::Assassin => "tile assassin",
+        Character::Unknown => "tile unspotted",
     }
 }
 
@@ -124,12 +135,12 @@ impl Component for GamePage {
     fn view(&self) -> Html {
         html! {
             <div>
-                <h1>{format!("Game ({})", &self.game_info.join_code)}</h1>
+                <h1>{format!("Game ({})", format_join_code(&self.game_info.join_code))}</h1>
                 <div class="box tiles">
                 {
                     self.tiles.iter().map(|tile| html! {
-                        <div class="tile">
-                            <span class="word">{&tile.codeword}</span>
+                        <div class={get_tile_class(tile)}>
+                            <span>{&tile.codeword}</span>
                         </div>
                     }).collect::<Html>()
                 }

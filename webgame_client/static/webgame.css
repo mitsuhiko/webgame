@@ -178,9 +178,47 @@ div.tiles div.tile {
   font-weight: 700;
   cursor: default;
   background-image: url(paper.png);
+  /*background-size: cover;
+  background-position: 50% 30%;*/
   box-shadow: 5px 5px 25px -15px rgba(0, 0, 0, 0.75);
   text-transform: uppercase;
   color: black;
   opacity: 0.9;
   text-shadow: 0 0 5px rgba(255, 255, 255, 1);
+}
+
+div.tiles div.tile.unspotted:hover {
+  cursor: pointer;
+  border-color: black;
+  text-shadow: 1px 1px 3px rgba(255, 255, 255, 1);
+  background: white;
+  background-image: url(letter.png);
+  background-size: cover;
+  background-position: 50% 0;
+  color: #555;
+  box-shadow: 2px 2px 10px -2px rgba(0, 0, 0, 1);
+}
+
+div.tiles div.tile.assassin {
+  background-image: url(assassin.png);
+  background-size: cover;
+  background-position: 50% 40%;
+}
+
+div.tiles div.tile.blue-agent {
+  background-image: url(blue-agent.png);
+  background-size: cover;
+  background-position: 50% 30%;
+}
+
+div.tiles div.tile.red-agent {
+  background-image: url(red-agent.png);
+  background-size: cover;
+  background-position: 50% 30%;
+}
+
+div.tiles div.tile.bystander {
+  background-image: url(bystander.png);
+  background-size: cover;
+  background-position: 50% 30%;
 }

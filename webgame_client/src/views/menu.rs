@@ -6,6 +6,7 @@ use yew::{
 
 use crate::api::Api;
 use crate::protocol::{Command, GameInfo, JoinGameCommand, Message, PlayerInfo};
+use crate::utils::format_join_code;
 
 #[derive(Clone, Properties)]
 pub struct Props {
@@ -56,7 +57,7 @@ impl Component for MenuPage {
             Msg::JoinGame => {
                 log::info!("Join Game");
                 self.api.send(Command::JoinGame(JoinGameCommand {
-                    join_code: self.join_code.clone(),
+                    join_code: self.join_code.replace("-", ""),
                 }));
             }
             Msg::ServerMessage(message) => match message {
@@ -69,7 +70,7 @@ impl Component for MenuPage {
                 _ => {}
             },
             Msg::SetJoinCode(join_code) => {
-                self.join_code = join_code.to_uppercase();
+                self.join_code = format_join_code(&join_code);
             }
             Msg::Ignore => {}
         }
@@ -85,8 +86,8 @@ impl Component for MenuPage {
                 <div class="toolbar">
                     <button onclick=self.link.callback(|_| Msg::NewGame)>{"New Game"}</button>
                     <input value=&self.join_code
-                        size="6"
-                        placeholder="CODE1"
+                        size="8"
+                        placeholder="JOINCODE"
                         onkeypress=self.link.callback(|event: KeyboardEvent| {
                             dbg!(event.key());
                             if event.key() == "Enter" {

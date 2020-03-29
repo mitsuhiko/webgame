@@ -3,10 +3,22 @@ use uuid::Uuid;
 
 use crate::player::PlayerInfo;
 
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq)]
+pub enum Turn {
+    Pregame,
+    Intermission,
+    RedSpymasterThinking,
+    BlueSpymasterThinking,
+    RedOperativesGuessing,
+    BlueOperativesGuessing,
+    Endgame,
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct GameStateSnapshot {
     pub players: Vec<PlayerInfo>,
     pub tiles: Vec<Tile>,
+    pub turn: Turn,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

@@ -6,14 +6,9 @@ use uuid::Uuid;
 
 use crate::board::Board;
 use crate::protocol::{
-    GameInfo, GameStateSnapshot, Message, PlayerDisconnectedMessage, PlayerRole, Team,
+    GameInfo, GameStateSnapshot, Message, PlayerDisconnectedMessage, PlayerRole, Team, Turn,
 };
 use crate::universe::Universe;
-
-enum GameProgression {
-    Lobby,
-    Pregame,
-}
 
 pub struct GamePlayerState {
     player_id: Uuid,
@@ -24,7 +19,7 @@ pub struct GamePlayerState {
 
 pub struct GameState {
     players: BTreeMap<Uuid, GamePlayerState>,
-    progression: GameProgression,
+    turn: Turn,
     board: Board,
 }
 
@@ -43,7 +38,7 @@ impl Game {
             universe: Arc::downgrade(&universe),
             game_state: Arc::new(Mutex::new(GameState {
                 players: BTreeMap::new(),
-                progression: GameProgression::Lobby,
+                turn: Turn::Pregame,
                 board: Board::new(),
             })),
         }
@@ -80,14 +75,12 @@ impl Game {
         GameStateSnapshot {
             players,
             tiles: state.board.tiles_for_role(role),
+            turn: state.turn,
         }
     }
 
     pub async fn is_joinable(&self) -> bool {
-        matches!(
-            self.game_state.lock().await.progression,
-            GameProgression::Lobby
-        )
+        self.game_state.lock().await.turn == Turn::Pregame
     }
 
     pub fn universe(&self) -> Arc<Universe> {
@@ -140,15 +133,16 @@ impl Game {
         }
     }
 
-    pub async fn mark_player_ready(&self, player_id: Uuid) {
+    pub async fn set_player_role_and_team(
+        &self,
+        player_id: Uuid,
+        role: PlayerRole,
+        team: Option<Team>,
+    ) {
         let mut game_state = self.game_state.lock().await;
         if let Some(player_state) = game_state.players.get_mut(&player_id) {
-            player_state.ready = true;
-        }
-        if game_state.players.values().all(|x| x.ready) {
-            game_state.progression = GameProgression::Pregame;
-            drop(game_state);
-            self.broadcast(&Message::PregameStarted).await;
+            player_state.role = role;
+            player_state.team = team;
         }
     }
 

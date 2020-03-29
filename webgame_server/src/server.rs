@@ -9,7 +9,7 @@ use warp::{ws, Filter};
 
 use crate::protocol::{
     AuthenticateCommand, ChatMessage, Command, JoinGameCommand, Message, ProtocolError,
-    ProtocolErrorKind, SendTextCommand,
+    ProtocolErrorKind, SendTextCommand, SetPlayerRoleCommand,
 };
 use crate::universe::Universe;
 
@@ -91,7 +91,7 @@ async fn on_player_message(
             Command::JoinGame(data) => on_join_game(universe, player_id, data).await,
             Command::LeaveGame => on_leave_game(universe, player_id).await,
             Command::SendText(data) => on_player_send_text(universe, player_id, data).await,
-            Command::MarkReady => on_player_mark_ready(universe, player_id).await,
+            Command::SetPlayerRole(data) => on_player_set_role(universe, player_id, data).await,
             Command::RequestGameStateSnapshot => {
                 on_player_request_game_state_snapshot(universe, player_id).await
             }
@@ -196,12 +196,14 @@ pub async fn on_player_send_text(
     }
 }
 
-pub async fn on_player_mark_ready(
+pub async fn on_player_set_role(
     universe: Arc<Universe>,
     player_id: Uuid,
+    cmd: SetPlayerRoleCommand,
 ) -> Result<(), ProtocolError> {
     if let Some(game) = universe.get_player_game(player_id).await {
-        game.mark_player_ready(player_id).await;
+        game.set_player_role_and_team(player_id, cmd.role, cmd.team)
+            .await;
         Ok(())
     } else {
         Err(ProtocolError::new(
