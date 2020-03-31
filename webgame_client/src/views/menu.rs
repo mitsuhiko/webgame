@@ -86,8 +86,8 @@ impl Component for MenuPage {
                 <div class="toolbar">
                     <button onclick=self.link.callback(|_| Msg::NewGame)>{"New Game"}</button>
                     <input value=&self.join_code
-                        size="8"
-                        placeholder="JOINCODE"
+                        size="7"
+                        placeholder="JOINCOD"
                         onkeypress=self.link.callback(|event: KeyboardEvent| {
                             dbg!(event.key());
                             if event.key() == "Enter" {

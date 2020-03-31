@@ -162,6 +162,13 @@ impl Component for GamePage {
                         oninput=self.link.callback(|e: InputData| Msg::SetChatLine(e.value)) />
                     <button class="primary" onclick=self.link.callback(|_| Msg::SendChat)>{"Send"}</button>
                 </div>
+                <div class="toolbar">
+                    <button>{"Red Team"}</button>
+                    <button>{"Blue Team"}</button>
+                    <button>{"Become Spymaster"}</button>
+                    <button>{"Become Operative"}</button>
+                    <button>{"Shuffle Board"}</button>
+                </div>
             </div>
         }
     }

@@ -3,6 +3,6 @@ pub fn format_join_code(code: &str) -> String {
     if code.len() > 3 {
         format!("{}-{}", &code[..3], &code[3..])
     } else {
-        code.to_string()
+        code
     }
 }
