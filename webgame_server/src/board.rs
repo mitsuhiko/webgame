@@ -11,7 +11,7 @@ lazy_static! {
     static ref WORDS: Vec<String> = include_str!("wordlist.txt")
         .lines()
         .map(|x| x.trim().to_string())
-        .filter(|x| x.len() > 0)
+        .filter(|x| !x.is_empty())
         .collect();
 }
 
@@ -58,18 +58,13 @@ impl Board {
         self.starting_team
     }
 
-    /// Returns the tiles.
-    pub fn tiles(&self) -> &[Tile] {
-        &self.tiles
-    }
-
     /// Returns tiles with non spotted characters hidden.
-    pub fn tiles_for_role(&self, role: PlayerRole) -> Vec<Tile> {
+    pub fn tiles(&self, reveal: bool) -> Vec<Tile> {
         self.tiles
             .iter()
             .map(|tile| {
                 let mut tile = tile.clone();
-                if !tile.spotted && role != PlayerRole::Spymaster {
+                if !(tile.spotted || reveal) {
                     tile.character = Character::Unknown;
                 }
                 tile

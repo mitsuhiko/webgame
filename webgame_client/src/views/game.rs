@@ -12,7 +12,9 @@ use yew::{
 use crate::api::Api;
 use crate::components::chat_box::{ChatBox, ChatLine, ChatLineData};
 use crate::components::player_list::PlayerList;
-use crate::protocol::{Character, Command, GameInfo, Message, PlayerInfo, SendTextCommand, Tile};
+use crate::protocol::{
+    Character, Command, GameInfo, GamePlayerState, Message, PlayerInfo, SendTextCommand, Tile, Turn,
+};
 use crate::utils::format_join_code;
 
 #[derive(Clone, Debug)]
@@ -32,7 +34,8 @@ pub struct GamePage {
     api: Box<dyn Bridge<Api>>,
     game_info: GameInfo,
     player_info: PlayerInfo,
-    players: HashMap<Uuid, Rc<PlayerInfo>>,
+    players: HashMap<Uuid, Rc<GamePlayerState>>,
+    turn: Option<Turn>,
     tiles: Vec<Tile>,
     chat_line: String,
     chat_log: Vector<Rc<ChatLine>>,
@@ -51,7 +54,7 @@ impl GamePage {
         let nickname = self
             .players
             .get(&player_id)
-            .map(|x| x.nickname.as_str())
+            .map(|x| x.player.nickname.as_str())
             .unwrap_or("anonymous")
             .to_string();
         self.chat_log
@@ -89,6 +92,7 @@ impl Component for GamePage {
                 data: ChatLineData::Connected,
             })),
             tiles: Vec::new(),
+            turn: None,
             players: HashMap::new(),
             player_info: props.player_info,
             on_game_command: props.on_game_command,
@@ -101,9 +105,9 @@ impl Component for GamePage {
                 Message::Chat(msg) => {
                     self.add_chat_message(msg.player_id, ChatLineData::Text(msg.text));
                 }
-                Message::PlayerConnected(info) => {
-                    let player_id = info.id;
-                    self.players.insert(player_id, Rc::new(info));
+                Message::PlayerConnected(state) => {
+                    let player_id = state.player.id;
+                    self.players.insert(player_id, Rc::new(state));
                     self.add_chat_message(player_id, ChatLineData::Connected);
                 }
                 Message::PlayerDisconnected(msg) => {
@@ -112,10 +116,11 @@ impl Component for GamePage {
                 }
                 Message::GameStateSnapshot(snapshot) => {
                     self.tiles = snapshot.tiles;
+                    self.turn = Some(snapshot.turn);
                     self.players = snapshot
                         .players
                         .into_iter()
-                        .map(|x| (x.id, Rc::new(x)))
+                        .map(|x| (x.player.id, Rc::new(x)))
                         .collect();
                 }
                 _ => {}
@@ -135,7 +140,7 @@ impl Component for GamePage {
     fn view(&self) -> Html {
         html! {
             <div>
-                <h1>{format!("Game ({})", format_join_code(&self.game_info.join_code))}</h1>
+                <h1>{format!("Game ({}; turn = {:?})", format_join_code(&self.game_info.join_code), self.turn)}</h1>
                 <div class="box tiles">
                 {
                     self.tiles.iter().map(|tile| html! {

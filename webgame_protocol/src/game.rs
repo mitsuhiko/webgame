@@ -16,7 +16,7 @@ pub enum Turn {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct GameStateSnapshot {
-    pub players: Vec<PlayerInfo>,
+    pub players: Vec<GamePlayerState>,
     pub tiles: Vec<Tile>,
     pub turn: Turn,
 }
@@ -27,7 +27,7 @@ pub struct GameInfo {
     pub join_code: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum Team {
     Red,
@@ -59,4 +59,12 @@ pub enum Character {
     BlueAgent,
     Bystander,
     Assassin,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct GamePlayerState {
+    pub player: PlayerInfo,
+    pub team: Option<Team>,
+    pub role: PlayerRole,
+    pub ready: bool,
 }

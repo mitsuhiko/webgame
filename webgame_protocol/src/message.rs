@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::game::{GameInfo, GameStateSnapshot, PlayerRole, Team};
+use crate::game::{GameInfo, GamePlayerState, GameStateSnapshot, PlayerRole, Team};
 use crate::player::PlayerInfo;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -83,7 +83,7 @@ pub struct SetPlayerRoleCommand {
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum Message {
     Chat(ChatMessage),
-    PlayerConnected(PlayerInfo),
+    PlayerConnected(GamePlayerState),
     PlayerDisconnected(PlayerDisconnectedMessage),
     PregameStarted,
     GameJoined(GameInfo),

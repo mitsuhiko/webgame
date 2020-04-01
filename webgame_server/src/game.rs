@@ -6,16 +6,10 @@ use uuid::Uuid;
 
 use crate::board::Board;
 use crate::protocol::{
-    GameInfo, GameStateSnapshot, Message, PlayerDisconnectedMessage, PlayerRole, Team, Turn,
+    GameInfo, GamePlayerState, GameStateSnapshot, Message, PlayerDisconnectedMessage, PlayerRole,
+    Team, Turn,
 };
 use crate::universe::Universe;
-
-pub struct GamePlayerState {
-    player_id: Uuid,
-    role: PlayerRole,
-    team: Option<Team>,
-    ready: bool,
-}
 
 pub struct GameState {
     players: BTreeMap<Uuid, GamePlayerState>,
@@ -61,20 +55,20 @@ impl Game {
 
     pub async fn snapshot_for(&self, player_id: Uuid) -> GameStateSnapshot {
         let state = self.game_state.lock().await;
-        let universe = self.universe();
         let mut players = vec![];
-        let mut role = PlayerRole::Spectator;
-        for (&other_player_id, state) in state.players.iter() {
-            if player_id == other_player_id {
-                role = state.role;
+        let mut reveal = false;
+        for (&other_player_id, player_state) in state.players.iter() {
+            if player_id == other_player_id
+                && player_state.role == PlayerRole::Spymaster
+                && state.turn != Turn::Pregame
+            {
+                reveal = true;
             }
-            if let Some(player_info) = universe.get_player_info(other_player_id).await {
-                players.push(player_info);
-            }
+            players.push(player_state.clone());
         }
         GameStateSnapshot {
             players,
-            tiles: state.board.tiles_for_role(role),
+            tiles: state.board.tiles(reveal),
             turn: state.turn,
         }
     }
@@ -100,20 +94,23 @@ impl Game {
         if game_state.players.contains_key(&player_id) {
             return;
         }
-        game_state.players.insert(
-            player_id,
-            GamePlayerState {
-                player_id,
-                role: PlayerRole::Spectator,
-                team: None,
-                ready: false,
-            },
-        );
 
-        if let Some(player_info) = universe.get_player_info(player_id).await {
-            drop(game_state);
-            self.broadcast(&Message::PlayerConnected(player_info)).await;
-        }
+        // TODO: `set_player_game_id` also looks up.
+        let player_info = match universe.get_player_info(player_id).await {
+            Some(player_info) => player_info,
+            None => return,
+        };
+
+        let state = GamePlayerState {
+            player: player_info,
+            role: PlayerRole::Spectator,
+            team: None,
+            ready: false,
+        };
+        game_state.players.insert(state.player.id, state.clone());
+
+        drop(game_state);
+        self.broadcast(&Message::PlayerConnected(state)).await;
     }
 
     pub async fn remove_player(&self, player_id: Uuid) {
@@ -149,8 +146,8 @@ impl Game {
     pub async fn broadcast(&self, message: &Message) {
         let universe = self.universe();
         let game_state = self.game_state.lock().await;
-        for player_state in game_state.players.values() {
-            universe.send(player_state.player_id, message).await;
+        for player_id in game_state.players.keys().copied() {
+            universe.send(player_id, message).await;
         }
     }
 

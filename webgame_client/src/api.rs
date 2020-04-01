@@ -30,9 +30,15 @@ pub struct Api {
 }
 
 fn get_websocket_location() -> String {
+    let location = web_sys::window().unwrap().location();
     format!(
-        "ws://{}/ws",
-        web_sys::window().unwrap().location().host().unwrap()
+        "{}://{}/ws",
+        if location.protocol().unwrap() == "https:" {
+            "wss"
+        } else {
+            "ws"
+        },
+        location.host().unwrap()
     )
 }
 

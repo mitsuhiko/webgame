@@ -169,10 +169,6 @@ async fn on_player_authenticate(
         .send(player_id, &Message::Authenticated(player_info.clone()))
         .await;
 
-    if let Some(game) = universe.get_player_game(player_id).await {
-        game.broadcast(&Message::PlayerConnected(player_info)).await;
-    }
-
     Ok(())
 }
 
