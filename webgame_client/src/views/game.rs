@@ -14,7 +14,7 @@ use crate::components::chat_box::{ChatBox, ChatLine, ChatLineData};
 use crate::components::player_list::PlayerList;
 use crate::protocol::{
     Character, Command, GameInfo, GamePlayerState, GameStateSnapshot, Message, PlayerInfo,
-    PlayerRole, SendTextCommand, SetPlayerRoleCommand, SetPlayerTeamCommand, Team, Tile,
+    PlayerRole, SendTextCommand, SetPlayerRoleCommand, SetPlayerTeamCommand, Team, Tile, Turn,
 };
 use crate::utils::format_join_code;
 
@@ -216,31 +216,37 @@ impl Component for GamePage {
                         oninput=self.link.callback(|e: InputData| Msg::SetChatLine(e.value)) />
                     <button class="primary" onclick=self.link.callback(|_| Msg::SendChat)>{"Send"}</button>
                 </div>
-                <div class="toolbar">
-                    <span>{"Team:"}</span>
-                    {team_button(Some(Team::Red), "Red")}
-                    {team_button(Some(Team::Blue), "Blue")}
-                    {team_button(None, "Spectate")}
-                    {if team.is_some() {
-                        html! {
-                            <>
-                                <span>{"Role:"}</span>
-                                {role_button(PlayerRole::Spymaster, "Spymaster")}
-                                {role_button(PlayerRole::Operative, "Operative")}
-                            </>
-                        }
-                    } else {
-                        html! {}
-                    }}
-                    {if state.team.is_some() {
-                        html! {
-                            <button class="primary" onclick=self.link.callback(|_| Msg::MarkReady)>{"Ready!"}</button>
-                        }
-                    } else {
-                        html! {}
-                    }}
-                    <button class="cancel" onclick=self.link.callback(|_| Msg::Disconnect)>{"Disconnect"}</button>
-                </div>
+                {if self.game_state.turn == Turn::Pregame {
+                    html! {
+                        <div class="toolbar">
+                            <span>{"Team:"}</span>
+                            {team_button(Some(Team::Red), "Red")}
+                            {team_button(Some(Team::Blue), "Blue")}
+                            {team_button(None, "Spectate")}
+                            {if team.is_some() {
+                                html! {
+                                    <>
+                                        <span>{"Role:"}</span>
+                                        {role_button(PlayerRole::Spymaster, "Spymaster")}
+                                        {role_button(PlayerRole::Operative, "Operative")}
+                                    </>
+                                }
+                            } else {
+                                html! {}
+                            }}
+                            {if state.team.is_some() {
+                                html! {
+                                    <button class="primary" onclick=self.link.callback(|_| Msg::MarkReady)>{"Ready!"}</button>
+                                }
+                            } else {
+                                html! {}
+                            }}
+                            <button class="cancel" onclick=self.link.callback(|_| Msg::Disconnect)>{"Disconnect"}</button>
+                        </div>
+                    }
+                } else {
+                    html! {}
+                }}
             </div>
         }
     }
