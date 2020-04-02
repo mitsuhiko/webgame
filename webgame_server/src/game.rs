@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 use std::sync::{Arc, Weak};
 use tokio::sync::Mutex;
 
@@ -168,6 +168,21 @@ impl Game {
         let mut game_state = self.game_state.lock().await;
         if let Some(player_state) = game_state.players.get_mut(&player_id) {
             player_state.ready = true;
+        }
+
+        let mut flags = HashSet::new();
+
+        for player in game_state.players.values() {
+            match (player.team, player.role) {
+                (None, _) | (_, PlayerRole::Spectator) => {}
+                (Some(team), role) => {
+                    flags.insert((team, role));
+                }
+            }
+        }
+
+        if flags.len() == 4 {
+            game_state.turn = game_state.board.initial_turn();
         }
     }
 

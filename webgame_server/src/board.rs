@@ -3,7 +3,7 @@ use std::iter;
 use lazy_static::lazy_static;
 use rand::prelude::*;
 
-use crate::protocol::{Character, Team, Tile};
+use crate::protocol::{Character, Team, Tile, Turn};
 
 pub const SIZE: usize = 5;
 
@@ -65,5 +65,13 @@ impl Board {
                 tile
             })
             .collect()
+    }
+
+    /// Returns the initial turn
+    pub fn initial_turn(&self) -> Turn {
+        match self.starting_team {
+            Team::Red => Turn::RedSpymasterThinking,
+            Team::Blue => Turn::BlueSpymasterThinking,
+        }
     }
 }

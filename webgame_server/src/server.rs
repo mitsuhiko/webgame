@@ -168,8 +168,10 @@ pub async fn on_player_mark_ready(
     player_id: Uuid,
 ) -> Result<(), ProtocolError> {
     if let Some(game) = universe.get_player_game(player_id).await {
-        game.mark_player_ready(player_id).await;
-        game.broadcast_state().await;
+        if game.is_joinable().await {
+            game.mark_player_ready(player_id).await;
+            game.broadcast_state().await;
+        }
     }
     Ok(())
 }
