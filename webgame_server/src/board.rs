@@ -3,7 +3,7 @@ use std::iter;
 use lazy_static::lazy_static;
 use rand::prelude::*;
 
-use crate::protocol::{Character, PlayerRole, Team, Tile};
+use crate::protocol::{Character, Team, Tile};
 
 pub const SIZE: usize = 5;
 
@@ -51,11 +51,6 @@ impl Board {
             tiles,
             starting_team,
         }
-    }
-
-    /// Returns the starting team.
-    pub fn starting_team(&self) -> Team {
-        self.starting_team
     }
 
     /// Returns tiles with non spotted characters hidden.

@@ -13,7 +13,8 @@ use crate::api::Api;
 use crate::components::chat_box::{ChatBox, ChatLine, ChatLineData};
 use crate::components::player_list::PlayerList;
 use crate::protocol::{
-    Character, Command, GameInfo, GamePlayerState, Message, PlayerInfo, SendTextCommand, Tile, Turn,
+    Character, Command, GameInfo, GamePlayerState, Message, PlayerInfo, PlayerRole,
+    SendTextCommand, SetPlayerRoleCommand, SetPlayerTeamCommand, Team, Tile, Turn,
 };
 use crate::utils::format_join_code;
 
@@ -47,6 +48,8 @@ pub enum Msg {
     SendChat,
     SetChatLine(String),
     ServerMessage(Message),
+    JoinTeam(Option<Team>),
+    SetRole(PlayerRole),
 }
 
 impl GamePage {
@@ -62,6 +65,15 @@ impl GamePage {
         while self.chat_log.len() > 20 {
             self.chat_log.pop_front();
         }
+    }
+
+    pub fn my_state(&self) -> Rc<GamePlayerState> {
+        self.players
+            .iter()
+            .find(|(id, _)| id == &self.player_info.id)
+            .unwrap()
+            .1
+            .clone()
     }
 }
 
@@ -132,15 +144,54 @@ impl Component for GamePage {
             Msg::SetChatLine(text) => {
                 self.chat_line = text;
             }
+            Msg::JoinTeam(team) => {
+                self.api
+                    .send(Command::SetPlayerTeam(SetPlayerTeamCommand { team }));
+            }
+            Msg::SetRole(role) => {
+                self.api
+                    .send(Command::SetPlayerRole(SetPlayerRoleCommand { role }));
+            }
             Msg::Ignore => {}
         }
         true
     }
 
     fn view(&self) -> Html {
+        if self.players.is_empty() {
+            return html! {};
+        }
+
+        let state = self.my_state();
+
+        let team = state.team;
+        let team_button = |new_team: Option<Team>, title: &str| -> Html {
+            html! {
+                <button
+                    disabled=team == new_team
+                    onclick=self.link.callback(move |_| Msg::JoinTeam(new_team))>
+                    {title}
+                </button>
+            }
+        };
+
+        let role = state.role;
+        let role_button = |new_role: PlayerRole, title: &str| -> Html {
+            if role == new_role {
+                html! {}
+            } else {
+                html! {
+                    <button
+                        onclick=self.link.callback(move |_| Msg::SetRole(new_role))>
+                        {title}
+                    </button>
+                }
+            }
+        };
+
         html! {
             <div>
-                <h1>{format!("Game ({}; turn = {:?})", format_join_code(&self.game_info.join_code), self.turn)}</h1>
+                <h1>{format!("Game ({})", format_join_code(&self.game_info.join_code))}</h1>
                 <div class="box tiles">
                 {
                     self.tiles.iter().map(|tile| html! {
@@ -168,11 +219,21 @@ impl Component for GamePage {
                     <button class="primary" onclick=self.link.callback(|_| Msg::SendChat)>{"Send"}</button>
                 </div>
                 <div class="toolbar">
-                    <button>{"Red Team"}</button>
-                    <button>{"Blue Team"}</button>
-                    <button>{"Become Spymaster"}</button>
-                    <button>{"Become Operative"}</button>
-                    <button>{"Shuffle Board"}</button>
+                    <span>{"Join team:"}</span>
+                    {team_button(Some(Team::Red), "Red")}
+                    {team_button(Some(Team::Blue), "Blue")}
+                    {team_button(None, "Spectate")}
+                    {if team.is_some() {
+                        html! {
+                            <>
+                                <span>{"Change role:"}</span>
+                                {role_button(PlayerRole::Spymaster, "Spymaster")}
+                                {role_button(PlayerRole::Operative, "Operative")}
+                            </>
+                        }
+                    } else {
+                        html! {}
+                    }}
                 </div>
             </div>
         }

@@ -13,7 +13,7 @@ pub enum Command {
     JoinGame(JoinGameCommand),
     LeaveGame,
     SetPlayerRole(SetPlayerRoleCommand),
-    RequestGameStateSnapshot,
+    SetPlayerTeam(SetPlayerTeamCommand),
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Hash)]
@@ -75,8 +75,12 @@ pub struct JoinGameCommand {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct SetPlayerRoleCommand {
-    pub team: Option<Team>,
     pub role: PlayerRole,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct SetPlayerTeamCommand {
+    pub team: Option<Team>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

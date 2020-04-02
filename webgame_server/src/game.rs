@@ -53,26 +53,6 @@ impl Game {
         }
     }
 
-    pub async fn snapshot_for(&self, player_id: Uuid) -> GameStateSnapshot {
-        let state = self.game_state.lock().await;
-        let mut players = vec![];
-        let mut reveal = false;
-        for (&other_player_id, player_state) in state.players.iter() {
-            if player_id == other_player_id
-                && player_state.role == PlayerRole::Spymaster
-                && state.turn != Turn::Pregame
-            {
-                reveal = true;
-            }
-            players.push(player_state.clone());
-        }
-        GameStateSnapshot {
-            players,
-            tiles: state.board.tiles(reveal),
-            turn: state.turn,
-        }
-    }
-
     pub async fn is_joinable(&self) -> bool {
         self.game_state.lock().await.turn == Turn::Pregame
     }
@@ -130,16 +110,53 @@ impl Game {
         }
     }
 
-    pub async fn set_player_role_and_team(
-        &self,
-        player_id: Uuid,
-        role: PlayerRole,
-        team: Option<Team>,
-    ) {
+    pub async fn set_player_role(&self, player_id: Uuid, role: PlayerRole) {
         let mut game_state = self.game_state.lock().await;
+        let mut my_team = None;
         if let Some(player_state) = game_state.players.get_mut(&player_id) {
+            // if we're not in a team, the player role cannot be set.
+            if player_state.team.is_none() {
+                return;
+            }
             player_state.role = role;
+            my_team = player_state.team;
+        }
+
+        if role == PlayerRole::Spymaster {
+            for player_state in game_state.players.values_mut() {
+                if player_state.player.id != player_id
+                    && player_state.role == PlayerRole::Spymaster
+                    && player_state.team == my_team
+                {
+                    player_state.role = PlayerRole::Operative;
+                }
+            }
+        }
+    }
+
+    pub async fn set_player_team(&self, player_id: Uuid, team: Option<Team>) {
+        let mut game_state = self.game_state.lock().await;
+        let have_spymaster = game_state
+            .players
+            .values()
+            .any(|x| x.role == PlayerRole::Spymaster);
+
+        if let Some(player_state) = game_state.players.get_mut(&player_id) {
             player_state.team = team;
+            // if we're leaving the team we turn into a spectator.
+            if team.is_none() {
+                player_state.role = PlayerRole::Spectator;
+            } else if (have_spymaster && player_state.role == PlayerRole::Spymaster)
+                || player_state.role == PlayerRole::Spectator
+            {
+                player_state.role = PlayerRole::Operative;
+            }
+        }
+
+        for player_state in game_state.players.values_mut() {
+            if player_state.player.id != player_id && player_state.role == PlayerRole::Spymaster {
+                player_state.role = PlayerRole::Operative;
+            }
         }
     }
 
@@ -148,6 +165,36 @@ impl Game {
         let game_state = self.game_state.lock().await;
         for player_id in game_state.players.keys().copied() {
             universe.send(player_id, message).await;
+        }
+    }
+
+    pub async fn broadcast_state(&self) {
+        let universe = self.universe();
+        let game_state = self.game_state.lock().await;
+        for player_id in game_state.players.keys().copied() {
+            log::debug!("broadcast game state to {}", player_id);
+            let mut players = vec![];
+            let mut reveal = false;
+            for (&other_player_id, player_state) in game_state.players.iter() {
+                if player_id == other_player_id
+                    && (player_state.role == PlayerRole::Spymaster
+                        || player_state.role == PlayerRole::Spectator)
+                    && game_state.turn != Turn::Pregame
+                {
+                    reveal = true;
+                }
+                players.push(player_state.clone());
+            }
+            universe
+                .send(
+                    player_id,
+                    &Message::GameStateSnapshot(GameStateSnapshot {
+                        players,
+                        tiles: game_state.board.tiles(reveal),
+                        turn: game_state.turn,
+                    }),
+                )
+                .await;
         }
     }
 

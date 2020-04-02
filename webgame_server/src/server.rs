@@ -9,7 +9,7 @@ use warp::{ws, Filter};
 
 use crate::protocol::{
     AuthenticateCommand, ChatMessage, Command, JoinGameCommand, Message, ProtocolError,
-    ProtocolErrorKind, SendTextCommand, SetPlayerRoleCommand,
+    ProtocolErrorKind, SendTextCommand, SetPlayerRoleCommand, SetPlayerTeamCommand,
 };
 use crate::universe::Universe;
 
@@ -77,6 +77,8 @@ async fn on_player_message(
         }
     };
 
+    log::debug!("command: {:?}", &cmd);
+
     if !universe.player_is_authenticated(player_id).await {
         match cmd {
             Command::Authenticate(data) => on_player_authenticate(universe, player_id, data).await,
@@ -92,9 +94,7 @@ async fn on_player_message(
             Command::LeaveGame => on_leave_game(universe, player_id).await,
             Command::SendText(data) => on_player_send_text(universe, player_id, data).await,
             Command::SetPlayerRole(data) => on_player_set_role(universe, player_id, data).await,
-            Command::RequestGameStateSnapshot => {
-                on_player_request_game_state_snapshot(universe, player_id).await
-            }
+            Command::SetPlayerTeam(data) => on_player_set_team(universe, player_id, data).await,
 
             // this should not happen here.
             Command::Authenticate(..) => Err(ProtocolError::new(
@@ -112,12 +112,7 @@ async fn on_new_game(universe: Arc<Universe>, player_id: Uuid) -> Result<(), Pro
     universe
         .send(player_id, &Message::GameJoined(game.game_info()))
         .await;
-    universe
-        .send(
-            player_id,
-            &Message::GameStateSnapshot(game.snapshot_for(player_id).await),
-        )
-        .await;
+    game.broadcast_state().await;
     Ok(())
 }
 
@@ -130,12 +125,7 @@ async fn on_join_game(
     universe
         .send(player_id, &Message::GameJoined(game.game_info()))
         .await;
-    universe
-        .send(
-            player_id,
-            &Message::GameStateSnapshot(game.snapshot_for(player_id).await),
-        )
-        .await;
+    game.broadcast_state().await;
     Ok(())
 }
 
@@ -198,8 +188,14 @@ pub async fn on_player_set_role(
     cmd: SetPlayerRoleCommand,
 ) -> Result<(), ProtocolError> {
     if let Some(game) = universe.get_player_game(player_id).await {
-        game.set_player_role_and_team(player_id, cmd.role, cmd.team)
-            .await;
+        if !game.is_joinable().await {
+            return Err(ProtocolError::new(
+                ProtocolErrorKind::BadState,
+                "cannot set role because game is not not joinable",
+            ));
+        }
+        game.set_player_role(player_id, cmd.role).await;
+        game.broadcast_state().await;
         Ok(())
     } else {
         Err(ProtocolError::new(
@@ -209,17 +205,20 @@ pub async fn on_player_set_role(
     }
 }
 
-pub async fn on_player_request_game_state_snapshot(
+pub async fn on_player_set_team(
     universe: Arc<Universe>,
     player_id: Uuid,
+    cmd: SetPlayerTeamCommand,
 ) -> Result<(), ProtocolError> {
     if let Some(game) = universe.get_player_game(player_id).await {
-        universe
-            .send(
-                player_id,
-                &Message::GameStateSnapshot(game.snapshot_for(player_id).await),
-            )
-            .await;
+        if !game.is_joinable().await {
+            return Err(ProtocolError::new(
+                ProtocolErrorKind::BadState,
+                "cannot set team because game is not not joinable",
+            ));
+        }
+        game.set_player_team(player_id, cmd.team).await;
+        game.broadcast_state().await;
         Ok(())
     } else {
         Err(ProtocolError::new(

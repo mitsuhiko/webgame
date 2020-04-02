@@ -89,7 +89,6 @@ impl Component for MenuPage {
                         size="7"
                         placeholder="JOINCOD"
                         onkeypress=self.link.callback(|event: KeyboardEvent| {
-                            dbg!(event.key());
                             if event.key() == "Enter" {
                                 Msg::JoinGame
                             } else {

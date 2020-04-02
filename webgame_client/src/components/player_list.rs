@@ -4,7 +4,7 @@ use im_rc::HashMap;
 use uuid::Uuid;
 use yew::{html, Component, ComponentLink, Html, Properties, ShouldRender};
 
-use crate::protocol::GamePlayerState;
+use crate::protocol::{GamePlayerState, PlayerRole, Team};
 
 #[derive(Clone, Properties)]
 pub struct Props {
@@ -45,7 +45,23 @@ impl Component for PlayerList {
                 <ul>
                 {
                     self.players.iter().map(|(_, state)| html! {
-                        <li>{format!("{}", state.player.nickname)}</li>
+                        <li class={
+                            match state.team {
+                                None => "neutral",
+                                Some(Team::Red) => "team-red",
+                                Some(Team::Blue) => "team-blue",
+                            }
+                        }>
+                            {format!(
+                                "{} ({})",
+                                state.player.nickname,
+                                match state.role {
+                                    PlayerRole::Spymaster => "Spymaster",
+                                    PlayerRole::Operative => "Operative",
+                                    PlayerRole::Spectator => "Spectator",
+                                }
+                            )}
+                        </li>
                     }).collect::<Html>()
                 }
                 </ul>
