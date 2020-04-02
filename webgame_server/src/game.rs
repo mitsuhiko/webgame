@@ -119,6 +119,7 @@ impl Game {
                 return;
             }
             player_state.role = role;
+            player_state.ready = false;
             my_team = player_state.team;
         }
 
@@ -129,6 +130,7 @@ impl Game {
                     && player_state.team == my_team
                 {
                     player_state.role = PlayerRole::Operative;
+                    player_state.ready = false;
                 }
             }
         }
@@ -143,6 +145,7 @@ impl Game {
 
         if let Some(player_state) = game_state.players.get_mut(&player_id) {
             player_state.team = team;
+            player_state.ready = false;
             // if we're leaving the team we turn into a spectator.
             if team.is_none() {
                 player_state.role = PlayerRole::Spectator;
@@ -156,7 +159,15 @@ impl Game {
         for player_state in game_state.players.values_mut() {
             if player_state.player.id != player_id && player_state.role == PlayerRole::Spymaster {
                 player_state.role = PlayerRole::Operative;
+                player_state.ready = false;
             }
+        }
+    }
+
+    pub async fn mark_player_ready(&self, player_id: Uuid) {
+        let mut game_state = self.game_state.lock().await;
+        if let Some(player_state) = game_state.players.get_mut(&player_id) {
+            player_state.ready = true;
         }
     }
 

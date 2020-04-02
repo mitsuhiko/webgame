@@ -1,18 +1,16 @@
 use std::rc::Rc;
 
-use im_rc::HashMap;
-use uuid::Uuid;
 use yew::{html, Component, ComponentLink, Html, Properties, ShouldRender};
 
-use crate::protocol::{GamePlayerState, PlayerRole, Team};
+use crate::protocol::{GameStateSnapshot, PlayerRole, Team, Turn};
 
 #[derive(Clone, Properties)]
 pub struct Props {
-    pub players: HashMap<Uuid, Rc<GamePlayerState>>,
+    pub game_state: Rc<GameStateSnapshot>,
 }
 
 pub struct PlayerList {
-    players: HashMap<Uuid, Rc<GamePlayerState>>,
+    game_state: Rc<GameStateSnapshot>,
 }
 
 impl Component for PlayerList {
@@ -21,7 +19,7 @@ impl Component for PlayerList {
 
     fn create(props: Self::Properties, _link: ComponentLink<Self>) -> Self {
         PlayerList {
-            players: props.players,
+            game_state: props.game_state,
         }
     }
 
@@ -30,8 +28,8 @@ impl Component for PlayerList {
     }
 
     fn change(&mut self, props: Self::Properties) -> ShouldRender {
-        if self.players != props.players {
-            self.players = props.players;
+        if self.game_state != props.game_state {
+            self.game_state = props.game_state;
             true
         } else {
             false
@@ -44,7 +42,7 @@ impl Component for PlayerList {
                 <h2>{"Players"}</h2>
                 <ul>
                 {
-                    self.players.iter().map(|(_, state)| html! {
+                    self.game_state.players.iter().map(|state| html! {
                         <li class={
                             match state.team {
                                 None => "neutral",
@@ -52,15 +50,23 @@ impl Component for PlayerList {
                                 Some(Team::Blue) => "team-blue",
                             }
                         }>
+                            <span class="nickname">{&state.player.nickname}</span>
                             {format!(
-                                "{} ({})",
-                                state.player.nickname,
+                                " {}",
                                 match state.role {
-                                    PlayerRole::Spymaster => "Spymaster",
-                                    PlayerRole::Operative => "Operative",
-                                    PlayerRole::Spectator => "Spectator",
+                                    PlayerRole::Spymaster => "(Spymaster)",
+                                    PlayerRole::Operative => "",
+                                    PlayerRole::Spectator => "(Spectator)",
                                 }
                             )}
+                            {
+                                if self.game_state.turn == Turn::Pregame &&
+                                    state.ready {
+                                    html! { " — ready" }
+                                } else {
+                                    html!{}
+                                }
+                            }
                         </li>
                     }).collect::<Html>()
                 }

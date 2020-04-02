@@ -54,12 +54,18 @@ button.primary {
   color: white;
 }
 
+button.cancel {
+  background: rgb(113, 110, 107);
+  color: white;
+}
+
 input:disabled,
 button:disabled,
 input:disabled:hover,
 button:disabled:hover {
   color: #888 !important;
   background: #eee !important;
+  cursor: default;
 }
 
 button {
@@ -142,6 +148,7 @@ div.toolbar * + * {
 div.toolbar *:last-child {
   border-top-right-radius: 4px !important;
   border-bottom-right-radius: 4px !important;
+  border-right: 2px solid black !important;
 }
 
 div.toolbar span {
@@ -154,11 +161,11 @@ div.players {
   margin-top: 0;
 }
 
-div.players li.team-red {
+div.players li.team-red span.nickname {
   color: red;
 }
 
-div.players li.team-blue {
+div.players li.team-blue span.nickname {
   color: blue;
 }
 

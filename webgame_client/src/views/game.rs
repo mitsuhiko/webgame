@@ -1,7 +1,7 @@
 use std::mem;
 use std::rc::Rc;
 
-use im_rc::{HashMap, Vector};
+use im_rc::Vector;
 use uuid::Uuid;
 use yew::agent::Bridged;
 use yew::{
@@ -13,8 +13,8 @@ use crate::api::Api;
 use crate::components::chat_box::{ChatBox, ChatLine, ChatLineData};
 use crate::components::player_list::PlayerList;
 use crate::protocol::{
-    Character, Command, GameInfo, GamePlayerState, Message, PlayerInfo, PlayerRole,
-    SendTextCommand, SetPlayerRoleCommand, SetPlayerTeamCommand, Team, Tile, Turn,
+    Character, Command, GameInfo, GamePlayerState, GameStateSnapshot, Message, PlayerInfo,
+    PlayerRole, SendTextCommand, SetPlayerRoleCommand, SetPlayerTeamCommand, Team, Tile,
 };
 use crate::utils::format_join_code;
 
@@ -35,9 +35,7 @@ pub struct GamePage {
     api: Box<dyn Bridge<Api>>,
     game_info: GameInfo,
     player_info: PlayerInfo,
-    players: HashMap<Uuid, Rc<GamePlayerState>>,
-    turn: Option<Turn>,
-    tiles: Vec<Tile>,
+    game_state: Rc<GameStateSnapshot>,
     chat_line: String,
     chat_log: Vector<Rc<ChatLine>>,
     on_game_command: Callback<GamePageCommand>,
@@ -46,6 +44,8 @@ pub struct GamePage {
 pub enum Msg {
     Ignore,
     SendChat,
+    Disconnect,
+    MarkReady,
     SetChatLine(String),
     ServerMessage(Message),
     JoinTeam(Option<Team>),
@@ -55,8 +55,10 @@ pub enum Msg {
 impl GamePage {
     pub fn add_chat_message(&mut self, player_id: Uuid, data: ChatLineData) {
         let nickname = self
+            .game_state
             .players
-            .get(&player_id)
+            .iter()
+            .find(|x| x.player.id == player_id)
             .map(|x| x.player.nickname.as_str())
             .unwrap_or("anonymous")
             .to_string();
@@ -67,13 +69,12 @@ impl GamePage {
         }
     }
 
-    pub fn my_state(&self) -> Rc<GamePlayerState> {
-        self.players
+    pub fn my_state(&self) -> &GamePlayerState {
+        self.game_state
+            .players
             .iter()
-            .find(|(id, _)| id == &self.player_info.id)
+            .find(|state| state.player.id == self.player_info.id)
             .unwrap()
-            .1
-            .clone()
     }
 }
 
@@ -103,9 +104,7 @@ impl Component for GamePage {
                 nickname: props.player_info.nickname.clone(),
                 data: ChatLineData::Connected,
             })),
-            tiles: Vec::new(),
-            turn: None,
-            players: HashMap::new(),
+            game_state: Rc::new(GameStateSnapshot::default()),
             player_info: props.player_info,
             on_game_command: props.on_game_command,
         }
@@ -119,21 +118,17 @@ impl Component for GamePage {
                 }
                 Message::PlayerConnected(state) => {
                     let player_id = state.player.id;
-                    self.players.insert(player_id, Rc::new(state));
+                    let game_state = Rc::make_mut(&mut self.game_state);
+                    game_state.players.push(state);
                     self.add_chat_message(player_id, ChatLineData::Connected);
                 }
                 Message::PlayerDisconnected(msg) => {
                     self.add_chat_message(msg.player_id, ChatLineData::Disconnected);
-                    self.players.remove(&msg.player_id);
+                    let game_state = Rc::make_mut(&mut self.game_state);
+                    game_state.players.retain(|x| x.player.id != msg.player_id);
                 }
                 Message::GameStateSnapshot(snapshot) => {
-                    self.tiles = snapshot.tiles;
-                    self.turn = Some(snapshot.turn);
-                    self.players = snapshot
-                        .players
-                        .into_iter()
-                        .map(|x| (x.player.id, Rc::new(x)))
-                        .collect();
+                    self.game_state = Rc::new(snapshot);
                 }
                 _ => {}
             },
@@ -152,13 +147,19 @@ impl Component for GamePage {
                 self.api
                     .send(Command::SetPlayerRole(SetPlayerRoleCommand { role }));
             }
+            Msg::MarkReady => {
+                self.api.send(Command::MarkReady);
+            }
+            Msg::Disconnect => {
+                self.api.send(Command::LeaveGame);
+            }
             Msg::Ignore => {}
         }
         true
     }
 
     fn view(&self) -> Html {
-        if self.players.is_empty() {
+        if self.game_state.players.is_empty() {
             return html! {};
         }
 
@@ -177,15 +178,12 @@ impl Component for GamePage {
 
         let role = state.role;
         let role_button = |new_role: PlayerRole, title: &str| -> Html {
-            if role == new_role {
-                html! {}
-            } else {
-                html! {
-                    <button
-                        onclick=self.link.callback(move |_| Msg::SetRole(new_role))>
-                        {title}
-                    </button>
-                }
+            html! {
+                <button
+                    disabled=role == new_role
+                    onclick=self.link.callback(move |_| Msg::SetRole(new_role))>
+                    {title}
+                </button>
             }
         };
 
@@ -194,14 +192,14 @@ impl Component for GamePage {
                 <h1>{format!("Game ({})", format_join_code(&self.game_info.join_code))}</h1>
                 <div class="box tiles">
                 {
-                    self.tiles.iter().map(|tile| html! {
+                    self.game_state.tiles.iter().map(|tile| html! {
                         <div class={get_tile_class(tile)}>
                             <span>{&tile.codeword}</span>
                         </div>
                     }).collect::<Html>()
                 }
                 </div>
-                <PlayerList players=self.players.clone()/>
+                <PlayerList game_state=self.game_state.clone()/>
                 <ChatBox log=self.chat_log.clone()/>
                 <div class="toolbar">
                     <span>{format!("{}: ", &self.player_info.nickname)}</span>
@@ -219,14 +217,14 @@ impl Component for GamePage {
                     <button class="primary" onclick=self.link.callback(|_| Msg::SendChat)>{"Send"}</button>
                 </div>
                 <div class="toolbar">
-                    <span>{"Join team:"}</span>
+                    <span>{"Team:"}</span>
                     {team_button(Some(Team::Red), "Red")}
                     {team_button(Some(Team::Blue), "Blue")}
                     {team_button(None, "Spectate")}
                     {if team.is_some() {
                         html! {
                             <>
-                                <span>{"Change role:"}</span>
+                                <span>{"Role:"}</span>
                                 {role_button(PlayerRole::Spymaster, "Spymaster")}
                                 {role_button(PlayerRole::Operative, "Operative")}
                             </>
@@ -234,6 +232,14 @@ impl Component for GamePage {
                     } else {
                         html! {}
                     }}
+                    {if state.team.is_some() {
+                        html! {
+                            <button class="primary" onclick=self.link.callback(|_| Msg::MarkReady)>{"Ready!"}</button>
+                        }
+                    } else {
+                        html! {}
+                    }}
+                    <button class="cancel" onclick=self.link.callback(|_| Msg::Disconnect)>{"Disconnect"}</button>
                 </div>
             </div>
         }

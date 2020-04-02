@@ -92,6 +92,7 @@ async fn on_player_message(
             Command::NewGame => on_new_game(universe, player_id).await,
             Command::JoinGame(data) => on_join_game(universe, player_id, data).await,
             Command::LeaveGame => on_leave_game(universe, player_id).await,
+            Command::MarkReady => on_player_mark_ready(universe, player_id).await,
             Command::SendText(data) => on_player_send_text(universe, player_id, data).await,
             Command::SetPlayerRole(data) => on_player_set_role(universe, player_id, data).await,
             Command::SetPlayerTeam(data) => on_player_set_team(universe, player_id, data).await,
@@ -159,6 +160,17 @@ async fn on_player_authenticate(
         .send(player_id, &Message::Authenticated(player_info.clone()))
         .await;
 
+    Ok(())
+}
+
+pub async fn on_player_mark_ready(
+    universe: Arc<Universe>,
+    player_id: Uuid,
+) -> Result<(), ProtocolError> {
+    if let Some(game) = universe.get_player_game(player_id).await {
+        game.mark_player_ready(player_id).await;
+        game.broadcast_state().await;
+    }
     Ok(())
 }
 

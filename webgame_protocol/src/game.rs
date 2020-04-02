@@ -14,11 +14,21 @@ pub enum Turn {
     Endgame,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct GameStateSnapshot {
     pub players: Vec<GamePlayerState>,
     pub tiles: Vec<Tile>,
     pub turn: Turn,
+}
+
+impl Default for GameStateSnapshot {
+    fn default() -> GameStateSnapshot {
+        GameStateSnapshot {
+            players: vec![],
+            tiles: vec![Tile::default(); 25],
+            turn: Turn::Pregame,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -34,11 +44,21 @@ pub enum Team {
     Blue,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Tile {
     pub codeword: String,
     pub character: Character,
     pub spotted: bool,
+}
+
+impl Default for Tile {
+    fn default() -> Tile {
+        Tile {
+            codeword: "".into(),
+            character: Character::Bystander,
+            spotted: false,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq)]

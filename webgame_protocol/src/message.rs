@@ -12,6 +12,7 @@ pub enum Command {
     NewGame,
     JoinGame(JoinGameCommand),
     LeaveGame,
+    MarkReady,
     SetPlayerRole(SetPlayerRoleCommand),
     SetPlayerTeam(SetPlayerTeamCommand),
 }
