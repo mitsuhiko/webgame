@@ -9,7 +9,8 @@ use warp::{ws, Filter};
 
 use crate::protocol::{
     AuthenticateCommand, ChatMessage, Command, JoinGameCommand, Message, ProtocolError,
-    ProtocolErrorKind, SendTextCommand, SetPlayerRoleCommand, SetPlayerTeamCommand,
+    ProtocolErrorKind, RevealCardCommand, SendTextCommand, SetPlayerRoleCommand,
+    SetPlayerTeamCommand, ShareCodenameCommand,
 };
 use crate::universe::Universe;
 
@@ -90,12 +91,14 @@ async fn on_player_message(
     } else {
         match cmd {
             Command::NewGame => on_new_game(universe, player_id).await,
-            Command::JoinGame(data) => on_join_game(universe, player_id, data).await,
+            Command::JoinGame(cmd) => on_join_game(universe, player_id, cmd).await,
             Command::LeaveGame => on_leave_game(universe, player_id).await,
             Command::MarkReady => on_player_mark_ready(universe, player_id).await,
-            Command::SendText(data) => on_player_send_text(universe, player_id, data).await,
-            Command::SetPlayerRole(data) => on_player_set_role(universe, player_id, data).await,
-            Command::SetPlayerTeam(data) => on_player_set_team(universe, player_id, data).await,
+            Command::SendText(cmd) => on_player_send_text(universe, player_id, cmd).await,
+            Command::ShareCodename(cmd) => on_player_share_codename(universe, player_id, cmd).await,
+            Command::SetPlayerRole(cmd) => on_player_set_role(universe, player_id, cmd).await,
+            Command::SetPlayerTeam(cmd) => on_player_set_team(universe, player_id, cmd).await,
+            Command::RevealCard(cmd) => on_player_reveal_card(universe, player_id, cmd).await,
 
             // this should not happen here.
             Command::Authenticate(..) => Err(ProtocolError::new(
@@ -196,6 +199,26 @@ pub async fn on_player_send_text(
     }
 }
 
+pub async fn on_player_share_codename(
+    universe: Arc<Universe>,
+    player_id: Uuid,
+    cmd: ShareCodenameCommand,
+) -> Result<(), ProtocolError> {
+    if let Some(game) = universe.get_player_game(player_id).await {
+        game.broadcast(&Message::Chat(ChatMessage {
+            player_id,
+            text: format!("codename: {} {}", cmd.codename, cmd.number),
+        }))
+        .await;
+        Ok(())
+    } else {
+        Err(ProtocolError::new(
+            ProtocolErrorKind::BadState,
+            "not in a game",
+        ))
+    }
+}
+
 pub async fn on_player_set_role(
     universe: Arc<Universe>,
     player_id: Uuid,
@@ -240,6 +263,17 @@ pub async fn on_player_set_team(
             "not in a game",
         ))
     }
+}
+
+pub async fn on_player_reveal_card(
+    universe: Arc<Universe>,
+    player_id: Uuid,
+    cmd: RevealCardCommand,
+) -> Result<(), ProtocolError> {
+    if let Some(game) = universe.get_player_game(player_id).await {
+        // reveal
+    }
+    Ok(())
 }
 
 pub async fn serve() {

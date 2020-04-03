@@ -42,7 +42,7 @@ impl Component for PlayerList {
                 <h2>{"Players"}</h2>
                 <ul>
                 {
-                    self.game_state.players.iter().map(|state| html! {
+                    for self.game_state.players.iter().map(|state| html! {
                         <li class={
                             match state.team {
                                 None => "neutral",
@@ -68,7 +68,7 @@ impl Component for PlayerList {
                                 }
                             }
                         </li>
-                    }).collect::<Html>()
+                    })
                 }
                 </ul>
             </div>

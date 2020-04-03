@@ -1,7 +1,8 @@
 use std::rc::Rc;
 
 use im_rc::Vector;
-use yew::{html, Component, ComponentLink, Html, Properties, ShouldRender};
+use web_sys::Element;
+use yew::{html, Component, ComponentLink, Html, NodeRef, Properties, ShouldRender};
 
 #[derive(PartialEq)]
 pub enum ChatLineData {
@@ -23,6 +24,8 @@ pub struct Props {
 
 pub struct ChatBox {
     log: Vector<Rc<ChatLine>>,
+    link: ComponentLink<ChatBox>,
+    log_ref: NodeRef,
 }
 
 impl ChatLine {
@@ -43,17 +46,25 @@ impl Component for ChatBox {
     type Message = ();
     type Properties = Props;
 
-    fn create(props: Self::Properties, _link: ComponentLink<Self>) -> Self {
-        ChatBox { log: props.log }
+    fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
+        ChatBox {
+            log: props.log,
+            link,
+            log_ref: NodeRef::default(),
+        }
     }
 
     fn update(&mut self, _: Self::Message) -> ShouldRender {
+        if let Some(div) = self.log_ref.cast::<Element>() {
+            div.set_scroll_top(div.scroll_height());
+        }
         true
     }
 
     fn change(&mut self, props: Self::Properties) -> ShouldRender {
         if self.log != props.log {
             self.log = props.log;
+            self.link.send_message(());
             true
         } else {
             false
@@ -64,11 +75,11 @@ impl Component for ChatBox {
         html! {
             <div class="chat box">
                 <h2>{"Chat"}</h2>
-                <ul>
+                <ul id="chat-log" ref=self.log_ref.clone()>
                 {
-                    self.log.iter().map(|item| html! {
+                    for self.log.iter().map(|item| html! {
                         <li>{item.render()}</li>
-                    }).collect::<Html>()
+                    })
                 }
                 </ul>
             </div>

@@ -1,3 +1,5 @@
+use std::fmt;
+
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -12,6 +14,50 @@ pub enum Turn {
     RedOperativesGuessing,
     BlueOperativesGuessing,
     Endgame,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq)]
+pub enum PlayerAction {
+    ShareCodename,
+    Guess,
+}
+
+impl fmt::Display for Turn {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            match *self {
+                Turn::Pregame => "pre-game",
+                Turn::Intermission => "intermission",
+                Turn::RedSpymasterThinking => "red spymaster",
+                Turn::RedOperativesGuessing => "red operatives",
+                Turn::BlueSpymasterThinking => "blue spymaster",
+                Turn::BlueOperativesGuessing => "blue operatives",
+                Turn::Endgame => "end",
+            }
+        )
+    }
+}
+
+impl Turn {
+    pub fn team(self) -> Option<Team> {
+        match self {
+            Turn::RedSpymasterThinking | Turn::RedOperativesGuessing => Some(Team::Red),
+            Turn::BlueSpymasterThinking | Turn::BlueOperativesGuessing => Some(Team::Blue),
+            _ => None,
+        }
+    }
+
+    pub fn role(self) -> Option<PlayerRole> {
+        match self {
+            Turn::RedSpymasterThinking | Turn::BlueSpymasterThinking => Some(PlayerRole::Spymaster),
+            Turn::RedOperativesGuessing | Turn::BlueOperativesGuessing => {
+                Some(PlayerRole::Operative)
+            }
+            _ => None,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -87,4 +133,18 @@ pub struct GamePlayerState {
     pub team: Option<Team>,
     pub role: PlayerRole,
     pub ready: bool,
+}
+
+impl GamePlayerState {
+    pub fn get_turn_player_action(&self, turn: Turn) -> Option<PlayerAction> {
+        if self.team != turn.team() && Some(self.role) != turn.role() {
+            None
+        } else {
+            match self.role {
+                PlayerRole::Operative => Some(PlayerAction::Guess),
+                PlayerRole::Spymaster => Some(PlayerAction::ShareCodename),
+                PlayerRole::Spectator => None,
+            }
+        }
+    }
 }

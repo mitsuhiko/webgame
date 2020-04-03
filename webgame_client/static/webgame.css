@@ -133,6 +133,10 @@ p.error {
   font-weight: 500;
 }
 
+div.toolbar {
+  clear: both;
+}
+
 div.toolbar * {
   margin: 8px 0 !important;
   border-top-right-radius: 0 !important;
@@ -175,6 +179,11 @@ div.chat {
   margin-right: 330px;
 }
 
+div.chat ul {
+  max-height: 120px;
+  overflow-y: auto;
+}
+
 div.tiles {
   margin: 18px 0;
   background: rgb(233, 233, 233);
@@ -201,8 +210,6 @@ div.tiles div.tile {
   font-weight: 700;
   cursor: default;
   background-image: url(paper.png);
-  /*background-size: cover;
-  background-position: 50% 30%;*/
   box-shadow: 5px 5px 25px -15px rgba(0, 0, 0, 0.75);
   text-transform: uppercase;
   color: black;
@@ -210,8 +217,7 @@ div.tiles div.tile {
   text-shadow: 0 0 5px rgba(255, 255, 255, 1);
 }
 
-div.tiles div.tile.unspotted:hover {
-  cursor: pointer;
+div.tiles div.tile.unspotted.can-guess:hover {
   border-color: black;
   text-shadow: 1px 1px 3px rgba(255, 255, 255, 1);
   background: white;
@@ -220,6 +226,7 @@ div.tiles div.tile.unspotted:hover {
   background-position: 50% 0;
   color: #555;
   box-shadow: 2px 2px 10px -2px rgba(0, 0, 0, 1);
+  cursor: pointer;
 }
 
 div.tiles div.tile.assassin {
@@ -244,4 +251,8 @@ div.tiles div.tile.bystander {
   background-image: url(bystander.png);
   background-size: cover;
   background-position: 50% 30%;
+}
+
+p.turn-info {
+  float: right;
 }

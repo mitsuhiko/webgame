@@ -13,8 +13,9 @@ use crate::api::Api;
 use crate::components::chat_box::{ChatBox, ChatLine, ChatLineData};
 use crate::components::player_list::PlayerList;
 use crate::protocol::{
-    Character, Command, GameInfo, GamePlayerState, GameStateSnapshot, Message, PlayerInfo,
-    PlayerRole, SendTextCommand, SetPlayerRoleCommand, SetPlayerTeamCommand, Team, Tile, Turn,
+    Character, Command, GameInfo, GamePlayerState, GameStateSnapshot, Message, PlayerAction,
+    PlayerInfo, PlayerRole, RevealCardCommand, SendTextCommand, SetPlayerRoleCommand,
+    SetPlayerTeamCommand, Team, Tile, Turn,
 };
 use crate::utils::format_join_code;
 
@@ -50,6 +51,7 @@ pub enum Msg {
     ServerMessage(Message),
     JoinTeam(Option<Team>),
     SetRole(PlayerRole),
+    Reveal(usize),
 }
 
 impl GamePage {
@@ -64,7 +66,7 @@ impl GamePage {
             .to_string();
         self.chat_log
             .push_back(Rc::new(ChatLine { nickname, data }));
-        while self.chat_log.len() > 20 {
+        while self.chat_log.len() > 100 {
             self.chat_log.pop_front();
         }
     }
@@ -78,14 +80,19 @@ impl GamePage {
     }
 }
 
-fn get_tile_class(tile: &Tile) -> &'static str {
-    match tile.character {
-        Character::BlueAgent => "tile blue-agent",
-        Character::RedAgent => "tile red-agent",
-        Character::Bystander => "tile bystander",
-        Character::Assassin => "tile assassin",
-        Character::Unknown => "tile unspotted",
+fn get_tile_class(tile: &Tile, can_guess: bool) -> String {
+    let mut rv = "tile ".to_string();
+    rv.push_str(match tile.character {
+        Character::BlueAgent => "blue-agent",
+        Character::RedAgent => "red-agent",
+        Character::Bystander => "bystander",
+        Character::Assassin => "assassin",
+        Character::Unknown => "unspotted",
+    });
+    if can_guess {
+        rv.push_str(" can-guess");
     }
+    rv
 }
 
 impl Component for GamePage {
@@ -153,6 +160,14 @@ impl Component for GamePage {
             Msg::Disconnect => {
                 self.api.send(Command::LeaveGame);
             }
+            Msg::Reveal(index) => {
+                if self.my_state().get_turn_player_action(self.game_state.turn)
+                    == Some(PlayerAction::Guess)
+                {
+                    self.api
+                        .send(Command::RevealCard(RevealCardCommand { index }));
+                }
+            }
             Msg::Ignore => {}
         }
         true
@@ -187,16 +202,21 @@ impl Component for GamePage {
             }
         };
 
+        let player_action = state.get_turn_player_action(self.game_state.turn);
+
         html! {
             <div>
+                <p class="turn-info">{format!("Turn: {}", self.game_state.turn)}</p>
                 <h1>{format!("Game ({})", format_join_code(&self.game_info.join_code))}</h1>
                 <div class="box tiles">
                 {
-                    self.game_state.tiles.iter().map(|tile| html! {
-                        <div class={get_tile_class(tile)}>
+                    for self.game_state.tiles.iter().enumerate().map(|(idx, tile)| html! {
+                        <div
+                            class={get_tile_class(tile, player_action == Some(PlayerAction::Guess))}
+                            onclick=self.link.callback(move |_| Msg::Reveal(idx))>
                             <span>{&tile.codeword}</span>
                         </div>
-                    }).collect::<Html>()
+                    })
                 }
                 </div>
                 <PlayerList game_state=self.game_state.clone()/>
@@ -214,7 +234,18 @@ impl Component for GamePage {
                             }
                         })
                         oninput=self.link.callback(|e: InputData| Msg::SetChatLine(e.value)) />
-                    <button class="primary" onclick=self.link.callback(|_| Msg::SendChat)>{"Send"}</button>
+                    {if player_action == Some(PlayerAction::ShareCodename) {
+                        html! {
+                            <>
+                                <button class="primary" onclick=self.link.callback(|_| Msg::SendChat)>{"Share Codename"}</button>
+                                <button onclick=self.link.callback(|_| Msg::SendChat)>{"Chat"}</button>
+                            </>
+                        }
+                    } else {
+                        html! {
+                            <button class="primary" onclick=self.link.callback(|_| Msg::SendChat)>{"Chat"}</button>
+                        }
+                    }}
                 </div>
                 {if self.game_state.turn == Turn::Pregame {
                     html! {

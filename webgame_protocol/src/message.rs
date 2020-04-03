@@ -9,12 +9,14 @@ use crate::player::PlayerInfo;
 pub enum Command {
     Authenticate(AuthenticateCommand),
     SendText(SendTextCommand),
+    ShareCodename(ShareCodenameCommand),
     NewGame,
     JoinGame(JoinGameCommand),
     LeaveGame,
     MarkReady,
     SetPlayerRole(SetPlayerRoleCommand),
     SetPlayerTeam(SetPlayerTeamCommand),
+    RevealCard(RevealCardCommand),
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Hash)]
@@ -70,6 +72,12 @@ pub struct SendTextCommand {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ShareCodenameCommand {
+    pub codename: String,
+    pub number: usize,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct JoinGameCommand {
     pub join_code: String,
 }
@@ -82,6 +90,11 @@ pub struct SetPlayerRoleCommand {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct SetPlayerTeamCommand {
     pub team: Option<Team>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct RevealCardCommand {
+    pub index: usize,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

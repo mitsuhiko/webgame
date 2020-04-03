@@ -141,25 +141,17 @@ impl Game {
         let have_spymaster = game_state
             .players
             .values()
-            .any(|x| x.role == PlayerRole::Spymaster);
+            .any(|x| x.role == PlayerRole::Spymaster && x.team == team);
 
         if let Some(player_state) = game_state.players.get_mut(&player_id) {
             player_state.team = team;
             player_state.ready = false;
-            // if we're leaving the team we turn into a spectator.
             if team.is_none() {
                 player_state.role = PlayerRole::Spectator;
-            } else if (have_spymaster && player_state.role == PlayerRole::Spymaster)
-                || player_state.role == PlayerRole::Spectator
-            {
+            } else if have_spymaster {
                 player_state.role = PlayerRole::Operative;
-            }
-        }
-
-        for player_state in game_state.players.values_mut() {
-            if player_state.player.id != player_id && player_state.role == PlayerRole::Spymaster {
-                player_state.role = PlayerRole::Operative;
-                player_state.ready = false;
+            } else {
+                player_state.role = PlayerRole::Spymaster;
             }
         }
     }

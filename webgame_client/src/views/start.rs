@@ -70,7 +70,7 @@ impl Component for StartPage {
     fn view(&self) -> Html {
         html! {
             <div>
-                <h1>{"Whatever Together"}</h1>
+                <h1>{"Let's Play Codenames Together"}</h1>
                 <p class="explanation">
                     {"Give yourself a name to play:"}
                 </p>
