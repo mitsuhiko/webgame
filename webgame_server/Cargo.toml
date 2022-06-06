@@ -16,5 +16,5 @@ uuid = { version = "0.8.1", features = ["v4"] }
 log = "0.4.8"
 rand = "0.7.3"
 listenfd = "0.3.3"
-hyper = "0.13.4"
+hyper = "0.14.5"
 lazy_static = "1.4.0"
